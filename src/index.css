@@ -1,0 +1,137 @@
+@import "tailwindcss";
+/* src/index.css or src/App.css */
+@import url('https://fonts.googleapis.com/css2?family=Jomhuria&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
+
+/* * {
+  outline: 1px solid red;
+} */
+/* @tailwind base;
+
+@tailwind components;
+
+@tailwind utilities; */
+
+/* :root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+} */
+/* .Body-1-font {
+  font-family: 'Roboto', sans-serif;
+} */
+.Roboto-font {
+  font-family: 'Roboto', sans-serif;
+}
+
+.Montserrat-font {
+  font-family: 'Montserrat', sans-serif;
+}
+
+.Poppins-font {
+  font-family: 'Poppins', sans-serif;
+
+}
+
+.Source-Sans-Pro-font {
+  font-family: 'Source Sans Pro', sans-serif;
+
+}
+
+.Jomhuria-font {
+  font-family: 'Jomhuria', sans-serif;
+}
+
+.Inter-font {
+  font-family: 'Inter', sans-serif;
+}
+
+
+.z-negative {
+  z-index: -20;
+}
+
+@layer utilities {
+  /* In your global CSS file (e.g., styles.css or within a <style> block) */
+
+  img {
+    @apply pointer-events-none select-none;
+  }
+
+
+  .animate-scaleIn {
+    animation: scaleIn 0.3s ease-out forwards;
+  }
+
+  @keyframes scaleIn {
+    0% {
+      transform: scale(0.9);
+      opacity: 0;
+    }
+
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+}
+
+h3 {
+  /* border: 2px solid red; */
+  /* font-size: 3.2em; */
+  line-height: normal !important;
+}
+
+a{
+  padding: 0;
+}
+
+
+/* Hide number input arrows */
+input[type="number"].hide-number-input::-webkit-outer-spin-button,
+input[type="number"].hide-number-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"].hide-number-input {
+  -moz-appearance: textfield; /* Firefox */
+}
+
+/* Hide native calendar icon on Chrome, Edge, Safari */
+.hide-native-datepicker-icon::-webkit-calendar-picker-indicator {
+  display: none;
+  -webkit-appearance: none;
+}
+
+/* body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+
+
+
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+} */
