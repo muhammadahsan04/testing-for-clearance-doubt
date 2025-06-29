@@ -1,3 +1,408 @@
+// import { DatePicker } from "antd"
+
+// export default function IncomeStatement() {
+//   const { RangePicker } = DatePicker
+
+//   return (
+//     <div className="w-full mx-auto px-3 py-6 sm:px-4 md:px-6 xl:px-8 xl:py-8">
+//       <div className="bg-white p-4 rounded-xl shadow">
+//         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+//           <div className="relative w-full sm:w-auto">
+//             <RangePicker className="h-10 !text-gray-400 !border-gray-300 !w-full sm:!w-[250px]" />
+//           </div>
+//           <button className="bg-slate-600 text-white px-4 py-2 rounded-md text-sm w-full sm:w-auto">Export</button>
+//         </div>
+
+//         <div className="text-center border-2 border-gray-200 rounded-lg py-4">
+//           <h2 className="text-[#056BB7] font-semibold">April 1st,2025 - April 30th,2025</h2>
+//         </div>
+
+//         <p className="text-[#056BB7] font-semibold text-[24px] py-3">Expenses</p>
+
+//         <div className="border border-gray-200 rounded-lg mb-4">
+//           <div className="space-y-2 px-3 py-3">
+//             <div className="flex justify-between items-center py-0.5 md:py-0.8 text-[15px]">
+//               <span className="text-gray-800">Net Sales</span>
+//               <div className="flex items-center">
+//                 <span className="font-medium">$176,467.51</span>
+//                 <span className="text-gray-500 text-xs ml-2">(30%)</span>
+//               </div>
+//             </div>
+//             <div className="flex justify-between items-center py-0.5 md:py-0.8 text-[15px]">
+//               <span className="text-gray-800">Taxes</span>
+//               <div className="flex items-center">
+//                 <span className="font-medium">$0.00</span>
+//                 <span className="text-gray-500 text-sm ml-2">(0%)</span>
+//               </div>
+//             </div>
+//             <div className="flex justify-between items-center py-0.5 md:py-0.8 text-[15px]">
+//               <span className="text-gray-800">Cost Of Goods Sold</span>
+//               <div className="flex items-center">
+//                 <span className="font-medium">$88,587.80</span>
+//                 <span className="text-gray-500 text-sm ml-2">(15%)</span>
+//               </div>
+//             </div>
+//             <div className="flex justify-between items-center py-0.5 md:py-0.8 text-[15px]">
+//               <span className="text-gray-800">Gross Profit</span>
+//               <div className="flex items-center">
+//                 <span className="font-medium">$89,879.71</span>
+//                 <span className="text-gray-500 text-sm ml-2">(15%)</span>
+//               </div>
+//             </div>
+//           </div>
+
+//           {/* This div will now properly show horizontal scrolling on small screens */}
+//           <div className="overflow-x-auto w-full block">
+//             <table className="min-w-full w-full table-fixed">
+//               <thead>
+//                 <tr className="bg-gray-100">
+//                   <th className="py-2 px-3 text-left text-sm font-semibold text-gray-800 w-[100px] sm:w-1/6 pl-3">
+//                     Date
+//                   </th>
+//                   <th className="py-2 px-3 text-left text-sm font-semibold text-gray-800 w-[120px] sm:w-1/4">
+//                     Category
+//                   </th>
+//                   <th className="py-2 px-3 text-left text-sm font-semibold text-gray-800 w-[150px] sm:w-1/3">
+//                     Name/Title
+//                   </th>
+//                   <th className="py-2 px-3 text-right text-sm font-semibold text-gray-800 w-[120px] sm:w-1/4 pr-3">
+//                     Amount ($)
+//                   </th>
+//                 </tr>
+//               </thead>
+//               <tbody>
+//                 <tr>
+//                   <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800">04-02-2025</td>
+//                   <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800">Payroll</td>
+//                   <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800">Alishan Salary</td>
+//                   <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800 text-right">5,000.00</td>
+//                 </tr>
+//                 <tr>
+//                   <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800">04-21-2025</td>
+//                   <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800">General Exp</td>
+//                   <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800">Office Maintenance</td>
+//                   <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800 text-right">2,000.00</td>
+//                 </tr>
+//                 <tr>
+//                   <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800">04-02-2025</td>
+//                   <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800">Store Rent</td>
+//                   <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800">April Rent</td>
+//                   <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800 text-right">15,000.00</td>
+//                 </tr>
+//                 <tr>
+//                   <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800">04-02-2025</td>
+//                   <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800">Teny Repair</td>
+//                   <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800">Repair (Oct-Dec)</td>
+//                   <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800 text-right">1,910.00</td>
+//                 </tr>
+//                 <tr>
+//                   <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800">03-02-2025</td>
+//                   <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800">Payroll</td>
+//                   <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800">Alishan Salary</td>
+//                   <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800 text-right">5,000.00</td>
+//                 </tr>
+//               </tbody>
+//             </table>
+//           </div>
+//         </div>
+
+//         <div className="mt-4 flex items-end flex-col space-y-2">
+//           <div className="border border-gray-200 rounded-xl py-2 px-4 bg-gray-100 w-full sm:w-5/12">
+//             <div className="py-1">
+//               <div className="flex items-center justify-between">
+//                 <span className="text-gray-800 mr-2 font-semibold text-sm">💰 Total Expenses ($)</span>
+//                 <div>
+//                   <span className="text-sm font-semibold">-$28,910</span>
+//                   <span className="text-gray-500 text-xs ml-2">(25%)</span>
+//                 </div>
+//               </div>
+//             </div>
+//             <div className="py-1">
+//               <div className="flex items-center justify-between">
+//                 <span className="text-gray-800 mr-2 font-semibold text-sm">💰 Net Profit ($)</span>
+//                 <div>
+//                   <span className="text-sm font-semibold">$31,090</span>
+//                   <span className="text-gray-500 text-xs ml-2">(52%)</span>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   )
+// }
+
+// import { DatePicker } from "antd"
+// import { useState, useEffect } from "react"
+// import axios from "axios"
+// import { toast } from "react-toastify"
+
+// interface FinancialSummary {
+//   netSales: number;
+//   cogs: number;
+//   grossProfit: number;
+//   totalExpenses: number;
+//   totalExpenseTax: number;
+//   totalTaxExpensesAndTotalExpense: number;
+//   netProfit: number;
+// }
+
+// interface ExpenseData {
+//   _id: string;
+//   expenseCategory: {
+//     name: string;
+//   };
+//   expenseName: string;
+//   amount: number;
+//   date: string;
+//   tax: {
+//     taxAmount: number;
+//   };
+// }
+
+// export default function IncomeStatement() {
+//   const { RangePicker } = DatePicker
+//   const [financialSummary, setFinancialSummary] = useState<FinancialSummary | null>(null)
+//   const [expenses, setExpenses] = useState<ExpenseData[]>([])
+//   const [loading, setLoading] = useState(true)
+
+//   const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+
+//   const getAuthToken = () => {
+//     let token = localStorage.getItem("token");
+//     if (!token) {
+//       token = sessionStorage.getItem("token");
+//     }
+//     return token;
+//   };
+
+//   const fetchFinancialSummary = async () => {
+//     try {
+//       const token = getAuthToken();
+//       if (!token) {
+//         toast.error("Authentication token not found. Please login again.");
+//         return;
+//       }
+
+//       const response = await axios.get(
+//         `${API_URL}/api/abid-jewelry-ms/getFinancialSummary`,
+//         {
+//           headers: {
+//             "x-access-token": token,
+//             "Content-Type": "application/json",
+//           },
+//         }
+//       );
+
+//       if (response.data.success) {
+//         setFinancialSummary(response.data.summary);
+//         console.log(financialSummary);
+
+//       }
+//     } catch (error) {
+//       console.error("Error fetching financial summary:", error);
+//       toast.error("Failed to fetch financial summary");
+//     }
+//   };
+
+//   const fetchExpenses = async () => {
+//     try {
+//       const token = getAuthToken();
+//       if (!token) {
+//         toast.error("Authentication token not found. Please login again.");
+//         return;
+//       }
+
+//       const response = await axios.get(
+//         `${API_URL}/api/abid-jewelry-ms/getAllExpenses`,
+//         {
+//           headers: {
+//             "x-access-token": token,
+//             "Content-Type": "application/json",
+//           },
+//         }
+//       );
+
+//       if (response.data.success) {
+//         setExpenses(response.data.data);
+//       }
+//     } catch (error) {
+//       console.error("Error fetching expenses:", error);
+//       toast.error("Failed to fetch expenses");
+//     }
+//   };
+
+//   useEffect(() => {
+//     const fetchData = async () => {
+//       setLoading(true);
+//       await Promise.all([fetchFinancialSummary(), fetchExpenses()]);
+//       setLoading(false);
+//     };
+
+//     fetchData();
+//   }, []);
+
+//   const formatCurrency = (amount: number) => {
+//     return new Intl.NumberFormat('en-US', {
+//       style: 'currency',
+//       currency: 'USD',
+//       minimumFractionDigits: 2,
+//     }).format(amount);
+//   };
+
+//   const formatDate = (dateString: string) => {
+//     return new Date(dateString).toLocaleDateString('en-US', {
+//       year: 'numeric',
+//       month: '2-digit',
+//       day: '2-digit'
+//     });
+//   };
+
+//   if (loading) {
+//     return (
+//       <div className="w-full mx-auto px-3 py-6 sm:px-4 md:px-6 xl:px-8 xl:py-8">
+//         <div className="bg-white p-4 rounded-xl shadow">
+//           <div className="flex items-center justify-center py-8">
+//             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+//           </div>
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div className="w-full mx-auto px-3 py-6 sm:px-4 md:px-6 xl:px-8 xl:py-8">
+//       <div className="bg-white p-4 rounded-xl shadow">
+//         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+//           <div className="relative w-full sm:w-auto">
+//             <RangePicker className="h-10 !text-gray-400 !border-gray-300 !w-full sm:!w-[250px]" />
+//           </div>
+//           <button className="bg-slate-600 text-white px-4 py-2 rounded-md text-sm w-full sm:w-auto">Export</button>
+//         </div>
+
+//         <div className="text-center border-2 border-gray-200 rounded-lg py-4">
+//           <h2 className="text-[#056BB7] font-semibold">Income Statement</h2>
+//         </div>
+
+//         <p className="text-[#056BB7] font-semibold text-[24px] py-3">Financial Summary</p>
+
+//         <div className="border border-gray-200 rounded-lg mb-4">
+//           <div className="space-y-2 px-3 py-3">
+//             <div className="flex justify-between items-center py-0.5 md:py-0.8 text-[15px]">
+//               <span className="text-gray-800">Net Sales</span>
+//               <div className="flex items-center">
+//                 <span className="font-medium">{formatCurrency(financialSummary?.netSales || 0)}</span>
+//               </div>
+//             </div>
+//             <div className="flex justify-between items-center py-0.5 md:py-0.8 text-[15px]">
+//               <span className="text-gray-800">Taxes</span>
+//               <div className="flex items-center">
+//                 <span className="font-medium">{formatCurrency(financialSummary?.totalExpenseTax || 0)}</span>
+//               </div>
+//             </div>
+//             <div className="flex justify-between items-center py-0.5 md:py-0.8 text-[15px]">
+//               <span className="text-gray-800">Cost Of Goods Sold</span>
+//               <div className="flex items-center">
+//                 <span className="font-medium">{formatCurrency(financialSummary?.cogs || 0)}</span>
+//               </div>
+//             </div>
+//             <div className="flex justify-between items-center py-0.5 md:py-0.8 text-[15px]">
+//               <span className="text-gray-800">Gross Profit</span>
+//               <div className="flex items-center">
+//                 <span className="font-medium">{formatCurrency(financialSummary?.grossProfit || 0)}</span>
+//               </div>
+//             </div>
+//           </div>
+
+//           {/* Expenses Table */}
+//           <div className="overflow-x-auto w-full block">
+//             <table className="min-w-full w-full table-fixed">
+//               <thead>
+//                 <tr className="bg-gray-100">
+//                   <th className="py-2 px-3 text-left text-sm font-semibold text-gray-800 w-[100px] sm:w-1/6 pl-3">
+//                     Date
+//                   </th>
+//                   <th className="py-2 px-3 text-left text-sm font-semibold text-gray-800 w-[120px] sm:w-1/4">
+//                     Category
+//                   </th>
+//                   <th className="py-2 px-3 text-left text-sm font-semibold text-gray-800 w-[150px] sm:w-1/3">
+//                     Name/Title
+//                   </th>
+//                   <th className="py-2 px-3 text-right text-sm font-semibold text-gray-800 w-[120px] sm:w-1/4 pr-3">
+//                     Amount ($)
+//                   </th>
+//                 </tr>
+//               </thead>
+//               <tbody>
+//                 {expenses.map((expense) => (
+//                   <tr key={expense._id}>
+//                     <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800">
+//                       {formatDate(expense.date)}
+//                     </td>
+//                     <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800">
+//                       {expense.expenseCategory.name}
+//                     </td>
+//                     <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800">
+//                       {expense.expenseName}
+//                     </td>
+//                     <td className="py-3 px-3 text-[13px] md:text-sm text-gray-800 text-right">
+//                       {expense.amount.toFixed(2)}
+//                     </td>
+//                   </tr>
+//                 ))}
+//                 {expenses.length === 0 && (
+//                   <tr>
+//                     <td colSpan={4} className="py-6 text-center text-gray-500">
+//                       No expenses found
+//                     </td>
+//                   </tr>
+//                 )}
+//               </tbody>
+//             </table>
+//           </div>
+//         </div>
+
+//         <div className="mt-4 flex items-end flex-col space-y-2">
+//           {/* <div className="border border-gray-200 rounded-xl py-2 px-4 bg-gray-100 w-full sm:w-5/12 lg:border-2"> */}
+//           <div className="border border-gray-200 rounded-xl py-2 px-4 bg-gray-100 w-full xl:border-none lg:w-md sm:w-md ">
+//             <div className="py-1">
+//               <div className="flex items-center justify-between">
+//                 <span className="text-gray-800 mr-2 font-semibold text-sm">💰 Total Expenses ($)</span>
+//                 <div>
+//                   <span className="text-sm font-semibold">
+//                     -{formatCurrency(financialSummary?.totalExpenses || 0)}
+//                   </span>
+//                 </div>
+//               </div>
+//             </div>
+//             <div className="py-1">
+//               <div className="flex items-center justify-between">
+//                 <span className="text-gray-800 mr-2 font-semibold text-sm">💰 Net Profit ($)</span>
+//                 <div>
+//                   <span className="text-sm font-semibold">
+//                     {formatCurrency(financialSummary?.netProfit || 0)}
+//                   </span>
+//                 </div>
+//               </div>
+//             </div>
+//             <div className="py-1">
+//               <div className="flex items-center justify-between">
+//                 <span className="text-gray-800 mr-2 font-semibold text-sm">💰 Total Tax of Expenses and Total Expense ($)</span>
+//                 <div>
+//                   <span className="text-sm font-semibold">
+//                    {formatCurrency(financialSummary?.totalTaxExpensesAndTotalExpense || 0)}
+//                   </span>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   )
+// }
+
 import { DatePicker } from "antd";
 import { useState, useEffect } from "react";
 import axios from "axios";

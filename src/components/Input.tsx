@@ -1,33 +1,3 @@
-// type InputProps = {
-//   placeholder?: string;
-//   value?: string;
-//   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-//   className?: string;
-//   type?: string;
-// };
-
-// const Input: React.FC<InputProps> = ({
-//   placeholder,
-//   value,
-//   onChange,
-//   className = "",
-//   type,
-// }) => {
-//   return (
-//     <input
-//       type={type ?? "text"}
-//       placeholder={placeholder}
-//       value={value}
-//       onChange={onChange}
-//       className={`px-4 py-2 border border-gray-300 rounded-md text-sm !focus:outline-none outline-none ${className}  ${
-//         type === "number" ? "hide-number-input" : ""
-//       }`}
-//     />
-//   );
-// };
-
-// export default Input;
-
 import React from "react";
 
 type InputProps = {
@@ -40,6 +10,9 @@ type InputProps = {
   iconPosition?: "left" | "right"; // Optional position, defaulting to right
   onIconClick?: () => void; // Optional click handler for the icon
   name?: string;
+  required?: any;
+  disable?: any;
+  readOnly?: any;
 };
 
 const Input: React.FC<InputProps> = ({
@@ -52,6 +25,9 @@ const Input: React.FC<InputProps> = ({
   iconPosition = "right",
   onIconClick,
   name,
+  required,
+  readOnly
+  // disable
 }) => {
   return (
     <div className="relative">
@@ -66,6 +42,10 @@ const Input: React.FC<InputProps> = ({
         } ${icon && iconPosition === "left" ? "pl-10" : ""} ${className} ${
           type === "number" ? "hide-number-input" : ""
         }`}
+        required={required}
+        readOnly={value !== undefined && onChange === undefined}
+        // disabled={disable}
+        disabled={readOnly}
       />
 
       {icon && (

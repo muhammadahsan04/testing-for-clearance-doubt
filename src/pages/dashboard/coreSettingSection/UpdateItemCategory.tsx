@@ -976,7 +976,75 @@ export default function UpdateItemCategory() {
           toast.error("Network error. Please check your internet connection.");
         } else {
           toast.error(error.response.data.message || "Failed to add style");
+        }
+      } else {
+        toast.error("An unexpected error occurred while adding style");
+      }
+    }
+  };
 
+  // Handle Add Gold Category
+  const handleAddGoldCategory = async () => {
+    if (!newGoldCategory.trim()) {
+      toast.error("Gold category name is required");
+      return;
+    }
+
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+
+      const payload = {
+        name: newGoldCategory,
+        description: newGoldCategoryDescription,
+      };
+
+      const response = await axios.post(
+        `${API_URL}/api/abid-jewelry-ms/createGoldCategory`,
+        payload,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Gold category added successfully!");
+        setNewGoldCategory("");
+        setNewGoldCategoryDescription("");
+        setIsGoldCategoryModalOpen(false);
+        fetchGoldCategories();
+      } else {
+        toast.error(response.data.message || "Failed to add gold category");
+      }
+    } catch (error) {
+      console.error("Error adding gold category:", error);
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(
+            error.response.data.message || "Failed to add gold category"
+          );
+        }
+      } else {
+        toast.error("An unexpected error occurred while adding gold category");
+      }
+    }
+  };
+
+  // Main update item function
+  const handleUpdateItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!canUpdate) {
+      toast.error("You don't have permission to update item");
+      return;
     }
 
     // Show message when no itemId is provided
@@ -1060,6 +1128,265 @@ export default function UpdateItemCategory() {
         }
       });
 
+      // Debug: Log the formData contents
+      console.log("FormData contents for update:");
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + ": " + pair[1]);
+      }
+
+      const response = await axios.put(
+        `${API_URL}/api/abid-jewelry-ms/updateItem/${id}`,
+        formData,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Item updated successfully!");
+        navigate("/dashboard/core-settings/all-item-category");
+        // Refresh the items list
+        fetchAllItems();
+        // Optionally navigate back to the list or stay on the update page
+        // navigate("/dashboard/core-settings/add-item");
+      } else {
+        toast.error(response.data.message || "Failed to update item");
+      }
+    } catch (error) {
+      console.error("Error updating item:", error);
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(error.response.data.message || "Failed to update item");
+        }
+      } else {
+        toast.error("An unexpected error occurred while updating item");
+      }
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
+
+  // useEffect hooks
+  useEffect(() => {
+    // Always fetch the basic data first
+    fetchSkuPrefixes();
+    fetchCategories();
+    fetchSubCategories();
+    fetchStyles();
+    fetchGoldCategories();
+    fetchAllItems();
+
+    // Only fetch item data if itemId exists
+    if (id) {
+      fetchItemById(id);
+    } else {
+      console.warn("Item ID not provided in URL parameters");
+      // Don't show error toast immediately, let the component render
+      // The user might be accessing this page directly without an itemId
+    }
+  }, [id, navigate]);
+
+  useEffect(() => {
+    if (!canUpdate) {
+      toast.error("You don't have permission to update item");
+    }
+  }, [canUpdate]);
+
+  // Handle click outside to close modals
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        categoryModalRef.current &&
+        !categoryModalRef.current.contains(event.target as Node) &&
+        isCategoryModalOpen
+      ) {
+        setIsCategoryModalOpen(false);
+      }
+
+      if (
+        subCategoryModalRef.current &&
+        !subCategoryModalRef.current.contains(event.target as Node) &&
+        isSubCategoryModalOpen
+      ) {
+        setIsSubCategoryModalOpen(false);
+      }
+      if (
+        styleModalRef.current &&
+        !styleModalRef.current.contains(event.target as Node) &&
+        isStyleModalOpen
+      ) {
+        setIsStyleModalOpen(false);
+      }
+      if (
+        goldCategoryModalRef.current &&
+        !goldCategoryModalRef.current.contains(event.target as Node) &&
+        isGoldCategoryModalOpen
+      ) {
+        setIsGoldCategoryModalOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [
+    isCategoryModalOpen,
+    isSubCategoryModalOpen,
+    isStyleModalOpen,
+    isGoldCategoryModalOpen,
+  ]);
+
+  // Close modals when ESC key is pressed
+  useEffect(() => {
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsCategoryModalOpen(false);
+        setIsSubCategoryModalOpen(false);
+        setIsStyleModalOpen(false);
+        setIsGoldCategoryModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleEsc);
+
+    return () => {
+      window.removeEventListener("keydown", handleEsc);
+    };
+  }, []);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (
+      isCategoryModalOpen ||
+      isSubCategoryModalOpen ||
+      isStyleModalOpen ||
+      isGoldCategoryModalOpen
+    ) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
+
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [
+    isCategoryModalOpen,
+    isSubCategoryModalOpen,
+    isStyleModalOpen,
+    isGoldCategoryModalOpen,
+  ]);
+
+  // Table columns configuration
+  interface Column {
+    header: string;
+    accessor: string;
+    type?: "text" | "image" | "status" | "actions";
+  }
+
+  const columns: Column[] = [
+    { header: "S.No", accessor: "sno", type: "text" },
+    { header: "SKU", accessor: "sku", type: "text" },
+    { header: "Barcode", accessor: "Barcode", type: "text" },
+    { header: "Unit Type", accessor: "unitType", type: "text" },
+    { header: "Image", accessor: "categoryImage", type: "image" },
+    { header: "Product For", accessor: "productFor", type: "text" },
+    { header: "Category", accessor: "category", type: "text" },
+    { header: "Sub Category", accessor: "subCategory", type: "text" },
+    { header: "Style", accessor: "style", type: "text" },
+    { header: "Search Tag", accessor: "searchTag", type: "text" },
+    { header: "Actions", accessor: "actions", type: "actions" },
+  ];
+
+  const generateBarcode = () => {
+    const randomBarcode = Math.floor(
+      10000000 + Math.random() * 90000000
+    ).toString();
+    setBarcode(randomBarcode);
+  };
+
+  const { Dragger } = Upload;
+
+  const addSearchTag = () => {
+    if (searchTagInput && !searchTags.includes(searchTagInput)) {
+      setSearchTags([...searchTags, searchTagInput]);
+      setSearchTagInput("");
+    }
+  };
+
+  const removeSearchTag = (tag: string) => {
+    setSearchTags(searchTags.filter((t) => t !== tag));
+  };
+
+  const featuredProps: UploadProps = {
+    name: "file",
+    showUploadList: false,
+    maxCount: 1,
+    onChange(info) {
+      const file = info.file;
+      console.log("file", file);
+
+      if (file.status === "done") {
+        message.success(`${file.name} uploaded successfully`);
+        setImage(file);
+        setStatus("success");
+      } else if (file.status === "error") {
+        message.error(`${file.name} upload failed`);
+        setImage(file);
+        setStatus("success");
+      }
+    },
+  };
+
+  const handleRemove = () => {
+    setImage(null);
+    setStatus(null);
+    setFeaturedImage(null);
+  };
+
+  // Update the gallery upload props to handle multiple files
+  const galleryProps: UploadProps = {
+    name: "file",
+    multiple: true,
+    maxCount: 4,
+    fileList: galleryImageFiles,
+    beforeUpload: (file) => {
+      return false;
+    },
+    onChange(info) {
+      const fileList = info.fileList.slice(-4);
+      setGalleryImageFiles(fileList);
+    },
+    onRemove: (file) => {
+      setGalleryImageFiles((prev) =>
+        prev.filter((item) => item.uid !== file.uid)
+      );
+    },
+    onDrop(e) {
+      console.log("Dropped files", e.dataTransfer.files);
+    },
+  };
+
+  const handleCategoryIconClick = () => {
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleSubCategoryIconClick = () => {
+    setIsSubCategoryModalOpen(true);
+  };
+
+  const handleStyleIconClick = () => {
+    setIsStyleModalOpen(true);
+  };
+
+  const handleGoldCategoryIconClick = () => {
+    setIsGoldCategoryModalOpen(true);
+  };
 
   // Show loading state while fetching item data
   if (loading && !currentItemData) {
@@ -1220,7 +1547,41 @@ export default function UpdateItemCategory() {
               <div className="flex flex-col">
                 <label
                   htmlFor="diamond-weight"
+                  className="block mb-1 text-[15px] font-medium"
+                >
+                  Diamond Weight
+                </label>
+                <Input
+                  placeholder="eg: 4.5"
+                  className="w-full"
+                  value={diamondWeight}
+                  onChange={(e) => setDiamondWeight(e.target.value)}
+                />
+              </div>
 
+              <div>
+                <label
+                  htmlFor="length"
+                  className="block mb-1 text-[15px] font-medium"
+                >
+                  Length
+                </label>
+                <Input
+                  placeholder="eg: 18″"
+                  className="w-full"
+                  value={length}
+                  onChange={(e) => setLength(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="size"
+                  className="block mb-1 text-[15px] font-medium"
+                >
+                  Size
+                </label>
+                <Input
                   placeholder="eg: 7"
                   className="w-full"
                   value={size}
@@ -1279,7 +1640,76 @@ export default function UpdateItemCategory() {
 
             {/* Right Column */}
             <div className="space-y-4">
+              <div>
+                <label
+                  htmlFor="barcode"
+                  className="block mb-1 text-[15px] font-medium"
+                >
+                  Barcode<span className="text-red-500"> *</span>
+                </label>
+                <div className="flex w-full items-center border border-gray-300 rounded-md overflow-hidden p-1">
+                  <input
+                    type="text"
+                    id="barcode"
+                    placeholder="eg: 23923"
+                    value={barcode}
+                    onChange={(e) => setBarcode(e.target.value)}
+                    className="w-full px-4 py-2 text-sm text-gray-700 placeholder-gray-400 border-none outline-none"
+                  />
+                  <Button
+                    text="Generate"
+                    onClick={generateBarcode}
+                    type="button"
+                    className="bg-[#28A745] text-white text-sm font-semibold px-4 py-2 hover:bg-green-600 transition-colors !border-none"
+                  />
+                </div>
+              </div>
 
+              <div>
+                <label className="block mb-1 text-[15px] font-medium">
+                  Product For <span className="text-red-500"> *</span>
+                </label>
+                <div className="flex flex-wrap gap-4 mt-2">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="male"
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                      checked={productFor.includes("male")}
+                      onChange={(e) =>
+                        handleProductForChange("male", e.target.checked)
+                      }
+                    />
+                    <label htmlFor="male" className="font-normal">
+                      Male
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="female"
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                      checked={productFor.includes("female")}
+                      onChange={(e) =>
+                        handleProductForChange("female", e.target.checked)
+                      }
+                    />
+                    <label htmlFor="female" className="font-normal">
+                      Female
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="kids"
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                      checked={productFor.includes("kids")}
+                      onChange={(e) =>
+                        handleProductForChange("kids", e.target.checked)
+                      }
+                    />
+                    <label htmlFor="kids" className="font-normal">
+                      Kids
                     </label>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -1315,7 +1745,70 @@ export default function UpdateItemCategory() {
                       className="cursor-pointer mb-1"
                       onClick={handleSubCategoryIconClick}
                       style={{ display: "inline-block" }}
+                    >
+                      <img
+                        src={plusIcon || "/placeholder.svg"}
+                        alt="Add sub-category"
+                        width={16}
+                      />
+                    </div>
+                  </div>
+                  <Dropdown
+                    key={`subcategory-${currentItemData?.subCategory?.name}`} // Add key to force re-render
+                    defaultValue={
+                      currentItemData?.subCategory?.name ||
+                      "Select Sub Category"
+                    }
+                    options={subCategories}
+                    className="w-full"
+                    onSelect={handleSubCategorySelect}
+                    searchable={true}
+                    noResultsMessage="No Sub category found"
+                  />
+                </div>
 
+                <div className="flex flex-col mt-3.5">
+                  <div className="flex items-center gap-2">
+                    <label
+                      htmlFor="gold-category"
+                      className="block mb-1 text-[15px] font-medium"
+                    >
+                      Gold Category
+                    </label>
+                    <div
+                      className="cursor-pointer mb-1"
+                      onClick={handleGoldCategoryIconClick}
+                      style={{ display: "inline-block" }}
+                    >
+                      <img
+                        src={plusIcon || "/placeholder.svg"}
+                        alt="Add gold category"
+                        width={16}
+                      />
+                    </div>
+                  </div>
+                  <Dropdown
+                    key={`goldcategory-${goldCategory}`} // Add key to force re-render
+                    defaultValue={goldCategory || "Select Gold Category"}
+                    options={goldCategories}
+                    className="w-full"
+                    onSelect={handleGoldCategorySelect}
+                    searchable={true}
+                    noResultsMessage="No Gold Category found"
+                  />
+                </div>
+
+                <div className="mt-3.5">
+                  <label
+                    htmlFor="gold-weight"
+                    className="block mb-1 text-[15px] font-medium"
+                  >
+                    Gold Weight{" "}
+                    <span className="text-sm text-gray-500">(grams)</span>
+                  </label>
+                  <Input
+                    placeholder="eg: 150 gms"
+                    className="w-full"
                     value={goldWeight}
                     onChange={(e) => setGoldWeight(e.target.value)}
                   />
@@ -1469,6 +1962,236 @@ export default function UpdateItemCategory() {
         />
       )} */}
 
+      {/* Custom Add Category Modal */}
+      {isCategoryModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/20 z-50">
+          <div
+            ref={categoryModalRef}
+            className="animate-scaleIn bg-white rounded-xl w-full max-w-md relative shadow-lg border-3 border-gray-300"
+          >
+            <div className="p-6">
+              <h3 className="text-xl font-semibold text-[#056BB7] mb-4">
+                Add Product Category
+              </h3>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="newCategory"
+                    className="block text-[15px] font-medium"
+                  >
+                    Category
+                  </label>
+                  <Input
+                    placeholder="Earrings"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="flex justify-end">
+                  <Button
+                    text="Add Product Category"
+                    onClick={handleAddCategory}
+                    type="button"
+                    className="px-6 !bg-[#056BB7] border-none text-white"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Add Sub-Category Modal */}
+      {isSubCategoryModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/20 z-50">
+          <div
+            ref={subCategoryModalRef}
+            className="animate-scaleIn bg-white rounded-xl w-md md:w-2xl lg:w-3xl relative shadow-lg border-3 border-gray-300"
+          >
+            <div className="p-6">
+              <h3 className="text-xl font-semibold text-[#056BB7] mb-4">
+                Add Product Sub-Category
+              </h3>
+
+              <div className="space-y-4">
+                <div className="grid lg:grid-cols-2 gap-4">
+                  <div className="space-y-2 w-full">
+                    <label
+                      htmlFor="category"
+                      className="block text-[15px] font-medium"
+                    >
+                      Category
+                    </label>
+                    <div className="!w-full">
+                      <Dropdown
+                        defaultValue={"Select Category"}
+                        options={categories}
+                        className="w-full"
+                        onSelect={(value) => setSelectedCategory(value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="newSubCategory"
+                      className="block text-[15px] font-medium"
+                    >
+                      Sub-Category
+                    </label>
+                    <Input
+                      placeholder="Product For Field Name"
+                      value={newSubCategory}
+                      onChange={(e) => setNewSubCategory(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button
+                    text="Add Product Sub Category"
+                    onClick={handleAddSubCategory}
+                    type="button"
+                    className="px-6 !bg-[#056BB7] border-none text-white"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Add Style Modal */}
+      {isStyleModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/20 z-50">
+          <div
+            ref={styleModalRef}
+            className="animate-scaleIn bg-white rounded-xl w-md md:w-2xl lg:w-3xl relative shadow-lg border-3 border-gray-300"
+          >
+            <div className="p-6">
+              <h3 className="text-xl font-semibold text-[#056BB7] mb-4">
+                Add Style
+              </h3>
+
+              <div className="space-y-4">
+                <div className="grid lg:grid-cols-1 gap-4">
+                  <div className="space-y-2 w-full">
+                    <label
+                      htmlFor="category"
+                      className="block text-[15px] font-medium"
+                    >
+                      Style
+                    </label>
+                    <div className="!w-full">
+                      <Input
+                        placeholder="Enter Style"
+                        value={newStyle}
+                        onChange={(e) => setNewStyle(e.target.value)}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="newSubCategory"
+                      className="block text-[15px] font-medium"
+                    >
+                      Description
+                    </label>
+
+                    <textarea
+                      value={newStyleDescription}
+                      onChange={(e) => setNewStyleDescription(e.target.value)}
+                      placeholder="Style description"
+                      rows={4}
+                      className="Poppins-font font-medium w-full px-4 py-2 border border-gray-300 rounded-md text-sm !focus:outline-none outline-none resize-none"
+                    ></textarea>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button
+                    text="Add Style"
+                    onClick={handleAddStyle}
+                    type="button"
+                    className="px-6 !bg-[#056BB7] border-none text-white"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Add Gold Category Modal */}
+      {isGoldCategoryModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/20 z-50">
+          <div
+            ref={goldCategoryModalRef}
+            className="animate-scaleIn bg-white rounded-xl w-md md:w-2xl lg:w-3xl relative shadow-lg border-3 border-gray-300"
+          >
+            <div className="p-6">
+              <h3 className="text-xl font-semibold text-[#056BB7] mb-4">
+                Add Gold Category
+              </h3>
+
+              <div className="space-y-4">
+                <div className="grid lg:grid-cols-1 gap-4">
+                  <div className="space-y-2 w-full">
+                    <label
+                      htmlFor="category"
+                      className="block text-[15px] font-medium"
+                    >
+                      Gold Category
+                    </label>
+                    <div className="!w-full">
+                      <Input
+                        placeholder="Enter Gold Category"
+                        value={newGoldCategory}
+                        onChange={(e) => setNewGoldCategory(e.target.value)}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="newSubCategory"
+                      className="block text-[15px] font-medium"
+                    >
+                      Description
+                    </label>
+
+                    <textarea
+                      value={newGoldCategoryDescription}
+                      onChange={(e) =>
+                        setNewGoldCategoryDescription(e.target.value)
+                      }
+                      placeholder="Gold Category description"
+                      rows={4}
+                      className="Poppins-font font-medium w-full px-4 py-2 border border-gray-300 rounded-md text-sm !focus:outline-none outline-none resize-none"
+                    ></textarea>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button
+                    text="Add Gold Category"
+                    onClick={handleAddGoldCategory}
+                    type="button"
+                    className="px-6 !bg-[#056BB7] border-none text-white"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

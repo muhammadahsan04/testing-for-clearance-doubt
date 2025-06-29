@@ -9,6 +9,8 @@ type AddStoreDropDownProps = {
   onSelect?: (value: string) => void;
   defaultValue?: string;
   DropDownName?: string;
+  searchable?: boolean; // Add this prop
+  noResultsMessage?: string; // Add this prop
 };
 
 const AddStoreDropDown: React.FC<AddStoreDropDownProps> = ({
@@ -19,22 +21,74 @@ const AddStoreDropDown: React.FC<AddStoreDropDownProps> = ({
   iconFirst = false,
   defaultValue,
   DropDownName,
+  searchable = false, // Add this prop
+  noResultsMessage = "No results found", // Add this prop
 }) => {
   const [selected, setSelected] = useState(defaultValue || options[0]);
   const [open, setOpen] = useState(false);
   const [isAbove, setIsAbove] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(""); // Add search state
+  const [isSearching, setIsSearching] = useState(false); // Add searching state
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null); // Add input ref
+
+  // Filter options based on search term
+  const filteredOptions = searchable
+    ? options.filter((option) =>
+        option.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : options;
 
   const handleSelect = (value: string, e: React.MouseEvent) => {
-    // Stop propagation to prevent modal from closing
     e.stopPropagation();
-
     setSelected(value);
     setOpen(false);
+    setSearchTerm(""); // Reset search term
+    setIsSearching(false); // Reset searching state
     onSelect?.(value);
   };
 
-  // ✅ Close dropdown on outside click
+  // Add button click handler
+  const handleButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!open) {
+      setOpen(true);
+      if (searchable) {
+        setTimeout(() => {
+          inputRef.current?.focus();
+          setIsSearching(true);
+        }, 100);
+      }
+    } else {
+      setOpen(false);
+      setIsSearching(false);
+    }
+  };
+
+  // Add search input handlers
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleInputFocus = () => {
+    setIsSearching(true);
+  };
+
+  const handleInputBlur = () => {
+    setTimeout(() => {
+      setIsSearching(false);
+    }, 150);
+  };
+
+  // Clear search term when dropdown closes
+  useEffect(() => {
+    if (!open) {
+      setSearchTerm("");
+      setIsSearching(false);
+    }
+  }, [open]);
+
+  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -54,7 +108,7 @@ const AddStoreDropDown: React.FC<AddStoreDropDownProps> = ({
     };
   }, [open]);
 
-  // 🔽 Check dropdown position
+  // Check dropdown position
   useEffect(() => {
     const checkDropdownPosition = () => {
       if (dropdownRef.current) {
@@ -74,40 +128,71 @@ const AddStoreDropDown: React.FC<AddStoreDropDownProps> = ({
     <div
       className="relative text-left text-[#5D6679]"
       ref={dropdownRef}
-      onClick={(e) => e.stopPropagation()} // Add this to stop propagation
+      onClick={(e) => e.stopPropagation()}
     >
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation(); // Add this to stop propagation
-          setOpen((prev) => !prev);
-        }}
-        className={`flex items-center justify-between border border-gray-300 rounded-md px-4 py-2 text-[13px] w-full ${className}`}
+      <div
+        className={`flex items-center justify-between border border-gray-300 rounded-md px-4 py-2 text-[13px] w-full cursor-pointer ${className}`}
+        onClick={handleButtonClick}
       >
-        <div className="flex items-center text-start gap-2">
-          {DropDownName && <span className="font-medium">{DropDownName}</span>}
+        <div className="flex items-center text-start gap-2 flex-1">
           {iconFirst && icon}
-          <span>{selected}</span>
+          {/* Show input when searching, otherwise show labels */}
+          {searchable && open && isSearching ? (
+            <input
+              ref={inputRef}
+              type="text"
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              value={searchTerm}
+              onChange={handleSearchChange}
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
+              className="outline-none bg-transparent flex-1 font-medium text-gray-600"
+              autoFocus
+            />
+          ) : (
+            <>
+              {DropDownName && (
+                <span className="font-medium">{DropDownName}</span>
+              )}
+              {!DropDownName && <span>{selected}</span>}
+              {DropDownName && <span>{selected}</span>}
+            </>
+          )}
         </div>
-        {!icon && <FaChevronDown className="text-xs ml-2" />}
+        {!icon && (
+          <FaChevronDown
+            className={`text-xs ml-2 transition-transform ${
+              open ? "rotate-180" : ""
+            }`}
+          />
+        )}
         {!iconFirst && icon}
-      </button>
+      </div>
+
       {open && (
         <ul
-          className={`absolute z-20 w-full bg-white border border-gray-200 rounded-md shadow-lg ${
+          className={`absolute z-20 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto ${
             isAbove ? "bottom-full mb-2" : "top-full mt-2"
           }`}
-          onClick={(e) => e.stopPropagation()} // Add this to stop propagation
+          onClick={(e) => e.stopPropagation()}
         >
-          {options.map((option, index) => (
-            <li
-              key={index}
-              onClick={(e) => handleSelect(option, e)} // Pass the event to handleSelect
-              className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
-            >
-              {option}
+          {filteredOptions.length === 0 ? (
+            <li className="px-4 py-2 text-sm text-gray-500">
+              {noResultsMessage}
             </li>
-          ))}
+          ) : (
+            filteredOptions.map((option, index) => (
+              <li
+                key={index}
+                onClick={(e) => handleSelect(option, e)}
+                className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
+              >
+                {option}
+              </li>
+            ))
+          )}
         </ul>
       )}
     </div>

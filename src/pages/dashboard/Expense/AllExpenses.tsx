@@ -227,6 +227,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { hasPermission } from "../sections/Expense";
 
 interface Column {
   header: string;
@@ -313,6 +314,54 @@ const AllExpense: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Handle edit expense - navigate to update page
+  const handleEditExpense = (expense: any) => {
+    console.log("Editing expense:", expense);
+    console.log("Expense ID:", expense._id);
+
+    if (expense._id) {
+      // Navigate to the update expense page with the expense ID
+      navigate(`/dashboard/expense/update-expense/${expense._id}`);
+    } else {
+      toast.error("Expense ID not found");
+    }
+  };
+
+  // Delete expense
+  const handleDeleteExpense = async (expense: any) => {
+    try {
+      const token = getAuthToken();
+
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+
+      const response = await axios.delete(
+        `${API_URL}/api/abid-jewelry-ms/deleteExpense/${expense._id}`,
+        {
+          headers: {
+            "x-access-token": token,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Expense deleted successfully!");
+        // Remove the deleted expense from the state
+        setExpensesData(
+          expensesData.filter((item: any) => item._id !== expense._id)
+        );
+      } else {
+        toast.error("Failed to delete expense");
+      }
+    } catch (error) {
+      console.error("Error deleting expense:", error);
+      toast.error("Failed to delete expense");
+    }
+  };
+
   useEffect(() => {
     fetchExpenses();
   }, []);
@@ -332,9 +381,7 @@ const AllExpense: React.FC = () => {
 
   return (
     <div className="w-full mx-auto px-3 py-6 sm:px-4 md:px-6 xl:px-8 xl:py-8">
-      <h2 className="Inter-font font-semibold text-[20px] mb-2">
-        All Expenses
-      </h2>
+      
       <AllExpensesTable
         className=""
         columns={columns}

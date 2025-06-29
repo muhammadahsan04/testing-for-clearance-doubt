@@ -97,7 +97,7 @@ const TaxManagementTable: React.FC<TaxManagementTableProps> = ({
   const { RangePicker } = DatePicker;
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [deleteZone, setDeleteZone] = useState<any>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -158,6 +158,115 @@ const TaxManagementTable: React.FC<TaxManagementTableProps> = ({
     }));
   };
 
+  // Handle edit form submission
+  // const handleEditSubmit = async (e: React.FormEvent) => {
+  //     e.preventDefault();
+
+  //     if (!formData.taxAmount) {
+  //         toast.error("Please enter a tax amount");
+  //         return;
+  //     }
+
+  //     if (!formData.description.trim()) {
+  //         toast.error("Please enter a tax description");
+  //         return;
+  //     }
+
+  //     if (!formData.taxDateRange || !formData.taxDateRange[0] || !formData.taxDateRange[1]) {
+  //         toast.error("Please select a date range for tax");
+  //         return;
+  //     }
+
+  //     // Extract the dates properly from dayjs objects
+  //     const startDate = formData.taxDateRange[0].$d;
+  //     const endDate = formData.taxDateRange[1].$d;
+
+  //     // Format dates as strings in YYYY-MM-DD format for API
+  //     const formattedStartDate =
+  //         startDate.getFullYear() +
+  //         "-" +
+  //         String(startDate.getMonth() + 1).padStart(2, "0") +
+  //         "-" +
+  //         String(startDate.getDate()).padStart(2, "0");
+
+  //     const formattedEndDate =
+  //         endDate.getFullYear() +
+  //         "-" +
+  //         String(endDate.getMonth() + 1).padStart(2, "0") +
+  //         "-" +
+  //         String(endDate.getDate()).padStart(2, "0");
+
+  //     // Check if start date is before end date
+  //     if (formattedStartDate >= formattedEndDate) {
+  //         toast.error("End date must be after the start date");
+  //         return;
+  //     }
+
+  //     setIsSubmitting(true);
+
+  //     try {
+  //         const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+  //         const token = getAuthToken();
+
+  //         if (!token) {
+  //             toast.error("Authentication token not found. Please login again.");
+  //             return;
+  //         }
+
+  //         const payload = {
+  //             taxAmount: formData.taxAmount,
+  //             description: formData.description.trim(),
+  //             startDate: formattedStartDate,
+  //             endDate: formattedEndDate,
+  //         };
+
+  //         const response = await axios.put(
+  //             `${API_URL}/api/abid-jewelry-ms/updateTax/${formData._id}`,
+  //             payload,
+  //             {
+  //                 headers: {
+  //                     "x-access-token": token,
+  //                     "Content-Type": "application/json",
+  //                 },
+  //             }
+  //         );
+
+  //         if (response.data.success) {
+  //             toast.success("Tax updated successfully!");
+  //             setIsEditing(false);
+
+  //             // Reset form
+  //             setFormData({
+  //                 _id: "",
+  //                 taxAmount: "",
+  //                 description: "",
+  //                 taxDateRange: null,
+  //             });
+
+  //             // Refresh data
+  //             if (onUpdate) {
+  //                 onUpdate();
+  //             }
+  //         } else {
+  //             toast.error(response.data.message || "Failed to update tax");
+  //         }
+  //     } catch (error) {
+  //         console.error("Error updating tax:", error);
+  //         if (axios.isAxiosError(error)) {
+  //             if (!error.response) {
+  //                 toast.error("Network error. Please check your internet connection.");
+  //             } else {
+  //                 toast.error(
+  //                     error.response.data.message || "Failed to update tax"
+  //                 );
+  //             }
+  //         } else {
+  //             toast.error("An unexpected error occurred while updating tax");
+  //         }
+  //     } finally {
+  //         setIsSubmitting(false);
+  //     }
+  // };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -287,6 +396,122 @@ const TaxManagementTable: React.FC<TaxManagementTableProps> = ({
     }
   };
 
+  // Fetch tax details when edit button is clicked
+  // const fetchTaxDetails = async (taxId: string) => {
+  //     setLoadingTaxDetails(true);
+  //     try {
+  //         const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+  //         const token = getAuthToken();
+
+  //         if (!token) {
+  //             toast.error("Authentication token not found. Please login again.");
+  //             return;
+  //         }
+
+  //         const response = await axios.get(
+  //             `${API_URL}/api/abid-jewelry-ms/getOneTax/${taxId}`,
+  //             {
+  //                 headers: {
+  //                     "x-access-token": token,
+  //                     "Content-Type": "application/json",
+  //                 },
+  //             }
+  //         );
+
+  //         if (response.data.success) {
+  //             const taxDetails = response.data.data;
+
+  //             // Convert dates to dayjs format for RangePicker
+  //             const startDate = moment(taxDetails.startDate);
+  //             const endDate = moment(taxDetails.endDate);
+
+  //             setFormData({
+  //                 _id: taxDetails._id,
+  //                 taxAmount: taxDetails.taxAmount,
+  //                 description: taxDetails.description,
+  //                 taxDateRange: [startDate, endDate],
+  //             });
+  //         } else {
+  //             toast.error(response.data.message || "Failed to fetch tax details");
+  //         }
+  //     } catch (error) {
+  //         console.error("Error fetching tax details:", error);
+  //         if (axios.isAxiosError(error)) {
+  //             if (!error.response) {
+  //                 toast.error("Network error. Please check your internet connection.");
+  //             } else {
+  //                 toast.error(
+  //                     error.response.data.message || "Failed to fetch tax details"
+  //                 );
+  //             }
+  //         } else {
+  //             toast.error("An unexpected error occurred while fetching tax details");
+  //         }
+  //     } finally {
+  //         setLoadingTaxDetails(false);
+  //     }
+  // };
+
+  const fetchTaxDetails = async (taxId: string) => {
+    if (!canUpdate) {
+      toast.error("You don't have permission to edit tax");
+      return;
+    }
+
+    setLoadingTaxDetails(true);
+    try {
+      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+      const token = getAuthToken();
+
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+
+      const response = await axios.get(
+        `${API_URL}/api/abid-jewelry-ms/getOneTax/${taxId}`,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        const taxDetails = response.data.data;
+
+        // Convert dates to dayjs format for RangePicker
+        const startDate = dayjs(taxDetails.startDate);
+        const endDate = dayjs(taxDetails.endDate);
+
+        setFormData({
+          _id: taxDetails._id,
+          taxAmount: taxDetails.taxAmount,
+          description: taxDetails.description,
+          taxDateRange: [startDate, endDate],
+        });
+      } else {
+        toast.error(response.data.message || "Failed to fetch tax details");
+      }
+    } catch (error) {
+      console.error("Error fetching tax details:", error);
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(
+            error.response.data.message || "Failed to fetch tax details"
+          );
+        }
+      } else {
+        toast.error("An unexpected error occurred while fetching tax details");
+      }
+    } finally {
+      setLoadingTaxDetails(false);
+    }
+  };
+
   // Handle delete tax
   const handleDeleteTax = async () => {
     try {
@@ -389,6 +614,147 @@ const TaxManagementTable: React.FC<TaxManagementTableProps> = ({
 
         {/* Table */}
         <div className="bg-white rounded-xl border border-gray-300 overflow-x-auto">
+          <table className="w-full text-sm text-left text-gray-700 ">
+            <thead className="bg-[#F9FAFB] text-black">
+              <tr className="font-semibold text-[16px] whitespace-nowrap w-full">
+                {columns.map((col, index) => {
+                  const isFirst = index === 0;
+                  const isLast = index === columns.length - 1;
+
+                  return (
+                    <th
+                      key={col.accessor}
+                      className="px-4 py-3 whitespace-nowrap text-left"
+                      style={{
+                        ...(isFirst && { width: "30%", whiteSpace: "nowrap" }),
+                      }}
+                    >
+                      {col.header}
+                    </th>
+                  );
+                })}
+                <th
+                  className="px-4 py-3 whitespace-nowrap text-right"
+                  style={{ width: "15%" }}
+                >
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="border-b border-gray-400">
+              {currentData.map((row, idx) => (
+                <tr
+                  key={idx}
+                  className="hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                  onClick={() => {
+                    if (onRowClick) {
+                      onRowClick(row);
+                    } else if (enableRowModal) {
+                      setSelectedUser(row);
+                    }
+                  }}
+                >
+                  {columns.map((col, index) => {
+                    return (
+                      <td
+                        key={col.accessor}
+                        className="px-4 py-2"
+                        style={{ width: "max-content" }}
+                      >
+                        <div className={`flex flex-row items-center `}>
+                          {(() => {
+                            switch (col.type) {
+                              case "image":
+                                return (
+                                  <div className="flex gap-2 items-center">
+                                    {row.userImage ? (
+                                      <>
+                                        <img
+                                          src={row.userImage}
+                                          alt="User"
+                                          className="w-8 h-8 rounded-full"
+                                        />
+                                        {row.name}
+                                      </>
+                                    ) : (
+                                      <>{row.name}</>
+                                    )}
+                                  </div>
+                                );
+                              case "status":
+                                return (
+                                  <span
+                                    className={`inline-block px-2 py-1 text-xs rounded-full ${
+                                      row.status === "active"
+                                        ? "bg-green-100 text-green-600"
+                                        : "bg-red-100 text-red-600"
+                                    }`}
+                                  >
+                                    {row.status}
+                                  </span>
+                                );
+                              default:
+                                return <>{row[col.accessor]}</>;
+                            }
+                          })()}
+                        </div>
+                      </td>
+                    );
+                  })}
+                  {/* Actions column */}
+                  <td className="px-4 py-2" style={{ width: "max-content" }}>
+                    <div className="flex justify-end gap-2">
+                      {eye && (
+                        <LuEye
+                          className="cursor-pointer"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      )}
+
+                      <RiEditLine
+                        className="cursor-pointer hover:text-blue-500"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsEditing(true);
+                          setEditingRow(row);
+
+                          // Fetch tax details using taxId from the row
+                          fetchTaxDetails(row.taxId || row._id);
+                        }}
+                      />
+
+                      <AiOutlineDelete
+                        className="cursor-pointer hover:text-red-500"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!canDelete) {
+                            toast.error(
+                              "You don't have permission to delete tax"
+                            );
+                            return;
+                          }
+
+                          setShowDeleteModal(true);
+                          setDeleteZone(row);
+                        }}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {currentData.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={columns.length + 1}
+                    className="text-center py-6 text-gray-500"
+                  >
+                    No data found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+
           {/* Pagination */}
           <div
             className={`flex flex-col ${
@@ -399,20 +765,38 @@ const TaxManagementTable: React.FC<TaxManagementTableProps> = ({
               <button
                 onClick={() => handleChangePage(currentPage - 1)}
                 className="w-10 h-10 rounded-full border border-gray-300 hover:bg-gray-200 flex items-center justify-center"
+                disabled={currentPage === 1}
               >
                 <GoChevronLeft size={18} />
               </button>
 
-              {[1, 2, 3, 10].map((num, idx) => (
-                <React.Fragment key={num}>
-                  {idx === 3 && (
-                    <div>
-                      <span className="text-gray-500 px-0.5">•</span>
-                      <span className="text-gray-500 px-0.5">•</span>
-                      <span className="text-gray-500 px-0.5">•</span>
-                    </div>
-                  )}
+              {/* Always show page 1 */}
+              <button
+                onClick={() => handleChangePage(1)}
+                className={`w-8 h-8 rounded-full text-sm flex items-center justify-center transition ${
+                  currentPage === 1
+                    ? "bg-[#407BFF] text-white"
+                    : "bg-[#E5E7EB] text-black hover:bg-[#407BFF] hover:text-white"
+                }`}
+              >
+                1
+              </button>
+
+              {/* Show dots if current page is far from start */}
+              {currentPage > 3 && (
+                <div>
+                  <span className="text-gray-500 px-0.5">•</span>
+                  <span className="text-gray-500 px-0.5">•</span>
+                  <span className="text-gray-500 px-0.5">•</span>
+                </div>
+              )}
+
+              {/* Show current page and surrounding pages (but not 1 or last page) */}
+              {[currentPage - 1, currentPage, currentPage + 1]
+                .filter((page) => page > 1 && page < totalPages && page >= 1)
+                .map((num) => (
                   <button
+                    key={num}
                     onClick={() => handleChangePage(num)}
                     className={`w-8 h-8 rounded-full text-sm flex items-center justify-center transition ${
                       currentPage === num
@@ -422,12 +806,35 @@ const TaxManagementTable: React.FC<TaxManagementTableProps> = ({
                   >
                     {num}
                   </button>
-                </React.Fragment>
-              ))}
+                ))}
+
+              {/* Show dots if current page is far from end */}
+              {currentPage < totalPages - 2 && totalPages > 1 && (
+                <div>
+                  <span className="text-gray-500 px-0.5">•</span>
+                  <span className="text-gray-500 px-0.5">•</span>
+                  <span className="text-gray-500 px-0.5">•</span>
+                </div>
+              )}
+
+              {/* Always show last page (if more than 1 page) */}
+              {totalPages > 1 && (
+                <button
+                  onClick={() => handleChangePage(totalPages)}
+                  className={`w-8 h-8 rounded-full text-sm flex items-center justify-center transition ${
+                    currentPage === totalPages
+                      ? "bg-[#407BFF] text-white"
+                      : "bg-[#E5E7EB] text-black hover:bg-[#407BFF] hover:text-white"
+                  }`}
+                >
+                  {totalPages}
+                </button>
+              )}
 
               <button
                 onClick={() => handleChangePage(currentPage + 1)}
                 className="w-10 h-10 rounded-full border border-gray-300 hover:bg-gray-200 flex items-center justify-center"
+                disabled={currentPage === totalPages}
               >
                 <GoChevronRight size={18} />
               </button>
@@ -436,10 +843,15 @@ const TaxManagementTable: React.FC<TaxManagementTableProps> = ({
             <div className="flex items-center gap-2 mt-2 md:mt-0">
               <span className="text-sm">Show:</span>
               <Dropdown
-                options={["5 Row", "10 Row", "15 Row", "20 Row"]}
+                options={["10 Row", "15 Row", "20 Row", "25 Row", "All"]}
+                defaultValue="10 Row"
                 onSelect={(val) => {
-                  const selected = parseInt(val.split(" ")[0]);
-                  setRowsPerPage(selected);
+                  if (val === "All") {
+                    setRowsPerPage(filteredData.length || data.length);
+                  } else {
+                    const selected = Number.parseInt(val.split(" ")[0]);
+                    setRowsPerPage(selected);
+                  }
                   setCurrentPage(1);
                 }}
                 className="bg-black text-white rounded px-2 py-1 min-w-[90px]"

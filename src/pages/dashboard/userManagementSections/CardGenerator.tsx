@@ -29,7 +29,7 @@ const CardGenerator: React.FC = () => {
     { header: "Role", accessor: "role" },
     { header: "Status", accessor: "status", type: "status" },
     { header: "Last Login", accessor: "date" },
-    { header: "Actions", accessor: "actions", type: "actions" },
+    // { header: "Actions", accessor: "actions", type: "actions" },
   ];
 
   const userData = [
@@ -140,11 +140,11 @@ const CardGenerator: React.FC = () => {
         columns={columns}
         data={userData}
         // tableTitle="Users"
-        onEdit={(row) => setSelectedUser(row)} // ✅ This opens the modal
-        onDelete={(row) => {
-          setSelectedUser(row); // ✅ Use the selected user
-          setShowDeleteModal(true); // ✅ Open the delete modal
-        }}
+        // onEdit={(row) => setSelectedUser(row)} // ✅ This opens the modal
+        // onDelete={(row) => {
+        //   setSelectedUser(row); // ✅ Use the selected user
+        //   setShowDeleteModal(true); // ✅ Open the delete modal
+        // }}
         uploadedFile={uploadedFile}
         setUploadedFile={setUploadedFile}
       />

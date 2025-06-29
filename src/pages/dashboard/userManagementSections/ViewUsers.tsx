@@ -145,7 +145,7 @@ const ViewUsers: React.FC = () => {
       );
 
       if (response.data.success) {
-        console.log('Users data:', response.data.data);
+        // console.log('Users data:', response.data.data);
         const usersData = response.data.data || [];
         setUsers(usersData);
 
@@ -192,7 +192,7 @@ const ViewUsers: React.FC = () => {
       );
 
       if (response.data.success) {
-        console.log('User counts data:', response.data.data);
+        // console.log('User counts data:', response.data.data);
         const countsData = response.data.data;
 
         // Extract admin count from the role counts

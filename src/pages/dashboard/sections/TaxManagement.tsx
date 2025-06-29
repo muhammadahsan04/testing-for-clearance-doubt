@@ -123,6 +123,14 @@ const TaxManagement: React.FC = () => {
       return;
     }
   }, [navigate]);
+
+  // Permission variables add
+  const userRole = getUserRole();
+  const isAdmin = userRole === "Admin" || userRole === "SuperAdmin";
+  const canCreate = isAdmin || hasPermission("Tax Management", "create");
+  const canUpdate = isAdmin || hasPermission("Tax Management", "update");
+  const canDelete = isAdmin || hasPermission("Tax Management", "delete");
+
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (e.target.value.length <= charLimit) {
       setMessage(e.target.value);
@@ -157,6 +165,59 @@ const TaxManagement: React.FC = () => {
       toast.error("You don't have permission to add tax");
     }
   }, [canCreate]);
+
+  // Fetch all taxes
+  const fetchTaxData = async () => {
+    setLoading(true);
+    try {
+      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+      const token = getAuthToken();
+
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+
+      const response = await axios.get(
+        `${API_URL}/api/abid-jewelry-ms/getAllTaxes`,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        // Transform the data to match the expected format for the table
+        const formattedData = response.data.data.map((item: TaxData) => ({
+          _id: item._id,
+          date: `${formatDate(item.startDate)} to ${formatDate(item.endDate)}`,
+          taxAmount: `$${item.taxAmount}`,
+          description: item?.description,
+        }));
+
+        setTaxData(formattedData);
+      } else {
+        toast.error(response.data.message || "Failed to fetch tax data");
+      }
+    } catch (error) {
+      console.error("Error fetching tax data:", error);
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(
+            error.response.data.message || "Failed to fetch tax data"
+          );
+        }
+      } else {
+        toast.error("An unexpected error occurred while fetching tax data");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Handle tax submission
   const handleTaxSubmit = async (e: React.FormEvent) => {
@@ -279,7 +340,7 @@ const TaxManagement: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 lg:gap-8 xl:gap-12">
               <div className="flex flex-col">
                 <label htmlFor="" className="mb-1">
-                  Tax Date Range
+                  Tax Date Range <span className="text-red-500">*</span>
                 </label>
                 <RangePicker
                   className="h-10 !text-gray-400 !border-[#D1D5DC]"
@@ -295,7 +356,7 @@ const TaxManagement: React.FC = () => {
 
               <div className="flex flex-col">
                 <label htmlFor="" className="mb-1">
-                  Tax Amount
+                  Tax Amount <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="number"
@@ -310,7 +371,7 @@ const TaxManagement: React.FC = () => {
             {/* Tax Description */}
             <div className="flex flex-col mb-5">
               <label htmlFor="" className="mb-1">
-                Tax Description
+                Tax Description <span className="text-red-500">*</span>
               </label>
               <textarea
                 value={message}

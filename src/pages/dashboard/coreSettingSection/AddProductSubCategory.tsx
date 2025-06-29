@@ -40,7 +40,7 @@ const getAuthToken = () => {
   return token;
 };
 
-// getUserRole function add کریں
+// getUserRole function
 const getUserRole = () => {
   let role = localStorage.getItem("role");
   if (!role) {
@@ -55,6 +55,7 @@ const AddProductSubCategory: React.FC = () => {
   const [subCategoryName, setSubCategoryName] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [categoryData, setCategoryData] = useState<CategoryData[]>([]);
   const [subCategoryData, setSubCategoryData] = useState<SubCategoryData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +64,7 @@ const AddProductSubCategory: React.FC = () => {
 
   const navigate = useNavigate();
 
-  // Permission variables add کریں (component کے اندر)
+  // Permission variables add
   const userRole = getUserRole();
   const isAdmin = userRole === "Admin" || userRole === "SuperAdmin";
   const canCreate = isAdmin || hasPermission("Core Setting", "create");
@@ -119,13 +120,13 @@ const AddProductSubCategory: React.FC = () => {
         setCategoryOptions(categoryNames);
 
         // Set default selected category if available
-        if (categoryNames.length > 0) {
-          setSelectedCategory(categoryNames[0]);
+        // if (categoryNames.length > 0) {
+        //   setSelectedCategory(categoryNames[0]);
 
-          // Fetch details for the first category
-          const firstCategoryId = categories[0]._id;
-          fetchCategoryDetails(firstCategoryId);
-        }
+        //   // Fetch details for the first category
+        //   const firstCategoryId = categories[0]._id;
+        //   fetchCategoryDetails(firstCategoryId);
+        // }
       } else {
         toast.error(response.data.message || "Failed to fetch categories");
       }
@@ -272,6 +273,7 @@ const AddProductSubCategory: React.FC = () => {
 
     if (!canCreate) {
       toast.error("You don't have permission to create product sub-category");
+      setIsLoading(false);
       return;
     }
 
@@ -284,7 +286,7 @@ const AddProductSubCategory: React.FC = () => {
       toast.error("Please select a category");
       return;
     }
-
+    setIsLoading(true);
     try {
       const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
       const token = getAuthToken();
@@ -324,7 +326,9 @@ const AddProductSubCategory: React.FC = () => {
         toast.success("Sub-category added successfully!");
 
         // Reset form fields
+        // Reset form fields
         setSubCategoryName("");
+        setSelectedCategory("");
 
         // Refresh subcategories list
         fetchSubCategories();
@@ -344,6 +348,8 @@ const AddProductSubCategory: React.FC = () => {
       } else {
         toast.error("An unexpected error occurred while adding sub-category");
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -427,7 +433,9 @@ const AddProductSubCategory: React.FC = () => {
           className="mt-4 grid gap-4 text-[15px] Poppins-font font-medium w-full grid-cols-1 md:grid-cols-3"
         >
           <div className="flex flex-col">
-            <label className="mb-1 text-black">Sub Category</label>
+            <label className="mb-1 text-black">
+              Sub Category <span className="text-red-500"> *</span>
+            </label>
             <Input
               placeholder="Product Sub-Category Name"
               value={subCategoryName}
@@ -437,21 +445,38 @@ const AddProductSubCategory: React.FC = () => {
           </div>
 
           <div className="flex flex-col">
-            <label className="mb-1 text-black">Category</label>
+            <label className="mb-1 text-black">
+              Category <span className="text-red-500"> *</span>
+            </label>
             <Dropdown
+              key={selectedCategory}
               // DropDownName="Select category"
               options={categoryOptions}
-              defaultValue="Select Category"
+              defaultValue={selectedCategory || "Select Category"} // Use selectedCategory state
               onSelect={handleCategorySelect}
+              noResultsMessage="No category found"
+              searchable={true} // Add this prop
             />
+
+            {/* <Dropdown
+                options={roles.map((role) => role.name)}
+                className="w-full"
+                onSelect={handleRoleSelect}
+                noResultsMessage="No roles found"
+                defaultValue={selectedRoleName || "Select Role"}
+                searchable={true} // Add this prop
+              /> */}
           </div>
 
           <div className="flex justify-end items-end font-medium gap-4">
             {canCreate && (
               <Button
-                text="Add"
+                text={isLoading ? "Saving..." : "Save"}
+                className={`px-6 !bg-[#056BB7] border-none text-white ${
+                  isLoading ? "opacity-70 cursor-not-allowed" : ""
+                }`}
                 type="submit"
-                className="px-6 !bg-[#056BB7] border-none text-white"
+                disabled={isLoading}
               />
             )}
           </div>

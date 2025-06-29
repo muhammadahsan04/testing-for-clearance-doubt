@@ -30,7 +30,7 @@ const getAuthToken = () => {
   return token;
 };
 
-// getUserRole function add کریں
+// getUserRole function add
 const getUserRole = () => {
   let role = localStorage.getItem("role");
   if (!role) {
@@ -47,8 +47,16 @@ const AddSKUPrefix: React.FC = () => {
   const [skuPrefixData, setSkuPrefixData] = useState<SkuPrefixData[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Permission variables add
+  const userRole = getUserRole();
+  const isAdmin = userRole === "Admin" || userRole === "SuperAdmin";
+  const canCreate = isAdmin || hasPermission("Core Setting", "create");
+  const canUpdate = isAdmin || hasPermission("Core Setting", "update");
+  const canDelete = isAdmin || hasPermission("Core Setting", "delete");
+
   const columns: Column[] = [
     { header: "S.no", accessor: "id" },
     { header: "Purchase Prefix Name", accessor: "name", type: "image" },
@@ -124,6 +132,84 @@ const AddSKUPrefix: React.FC = () => {
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!canCreate) {
+      toast.error("You don't have permission to add sku prefix");
+      return;
+    }
+
+    if (!prefixName.trim()) {
+      toast.error("Prefix name is required");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+      const token = getAuthToken();
+
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+
+      const payload = {
+        prefixName: prefixName,
+        status: "active", // Default status is active
+      };
+
+      const response = await axios.post(
+        `${API_URL}/api/abid-jewelry-ms/skuPrefix`,
+        payload,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("SKU prefix added successfully!");
+
+        // Add the new prefix to the list without refreshing
+        const newPrefix = {
+          _id: response.data.data._id,
+          id: (skuPrefixData.length + 1).toString().padStart(2, "0"),
+          name: response.data.data.prefixName,
+          prefixName: response.data.data.prefixName,
+          status:
+            response.data.data.status.charAt(0).toUpperCase() +
+            response.data.data.status.slice(1),
+        };
+
+        setSkuPrefixData([...skuPrefixData, newPrefix]);
+
+        // Reset form field
+        setPrefixName("");
+      } else {
+        toast.error(response.data.message || "Failed to add SKU prefix");
+      }
+    } catch (error) {
+      console.error("Error adding SKU prefix:", error);
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(
+            error.response.data.message || "Failed to add SKU prefix"
+          );
+        }
+      } else {
+        toast.error("An unexpected error occurred while adding SKU prefix");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Handle SKU prefix update
   const handleUpdateSkuPrefix = async (updatedPrefix: SkuPrefixData) => {
@@ -155,6 +241,58 @@ const AddSKUPrefix: React.FC = () => {
     );
   };
 
+  // Handle SKU prefix deletion
+  const handleDeleteSkuPrefix = async (prefix: SkuPrefixData) => {
+    try {
+      if (!canDelete) {
+        toast.error("You don't have permission to delete sku prefix");
+        return;
+      }
+
+      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+      const token = getAuthToken();
+
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+
+      const response = await axios.delete(
+        `${API_URL}/api/abid-jewelry-ms/deleteSkuPrefix/${prefix._id}`,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("SKU prefix deleted successfully!");
+
+        // Remove the deleted prefix from the list
+        setSkuPrefixData(
+          skuPrefixData.filter((item) => item._id !== prefix._id)
+        );
+      } else {
+        toast.error(response.data.message || "Failed to delete SKU prefix");
+      }
+    } catch (error) {
+      console.error("Error deleting SKU prefix:", error);
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(
+            error.response.data.message || "Failed to delete SKU prefix"
+          );
+        }
+      } else {
+        toast.error("An unexpected error occurred while deleting SKU prefix");
+      }
+    }
+  };
+
   return (
     <div className="w-full mx-auto px-3 py-6 sm:px-4 md:px-6 xl:px-8 xl:py-6">
       <div className="bg-white rounded-xl shadow-md px-4 sm:px-6 md:px-8 py-6 mb-10">
@@ -178,10 +316,12 @@ const AddSKUPrefix: React.FC = () => {
           <div className="flex justify-end font-medium gap-4">
             {canCreate && (
               <Button
-                text={isSubmitting ? "Saving..." : "Save"}
+                text={isLoading ? "Saving..." : "Save"}
+                className={`px-6 !bg-[#056BB7] border-none text-white ${
+                  isLoading ? "opacity-70 cursor-not-allowed" : ""
+                }`}
                 type="submit"
-                disabled={isSubmitting}
-                className="px-6 !bg-[#056BB7] border-none text-white"
+                disabled={isLoading}
               />
             )}
           </div>
@@ -199,6 +339,10 @@ const AddSKUPrefix: React.FC = () => {
           data={skuPrefixData}
           enableRowModal={false}
           tableTitle="SKU Prefix"
+          canUpdate={canUpdate}
+          canDelete={canDelete}
+          onEdit={handleUpdateSkuPrefix} // Add this line
+          onDelete={handleDeleteSkuPrefix} // Add this line
         />
       )}
     </div>

@@ -1,48 +1,82 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FaChevronDown } from "react-icons/fa";
-import { RxCheck } from "react-icons/rx"; // using check icon instead of checkbox
+import { RxCheck } from "react-icons/rx";
+
+type OptionType = string | { label: string; value: string };
 
 type MultiSelectDropdownProps = {
-  options: string[];
+  options: OptionType[];
   className?: string;
   icon?: React.ReactNode;
   iconFirst?: boolean;
   onSelect?: (values: string[]) => void;
+  onChange?: (values: string[]) => void; // Added for compatibility
   defaultValues?: string[];
+  selectedValues?: string[]; // Added for controlled component
   DropDownName?: string;
+  placeholder?: string;
 };
 
 const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
   options,
   className = "",
   onSelect,
+  onChange,
   icon,
   iconFirst = false,
   defaultValues = [],
+  selectedValues,
   DropDownName,
+  placeholder = "Select options",
 }) => {
-  const [selected, setSelected] = useState<string[]>(defaultValues || []);
+  const [selected, setSelected] = useState<string[]>(selectedValues || defaultValues || []);
   const [open, setOpen] = useState(false);
   const [isAbove, setIsAbove] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Sync with parent
+  // Sync with parent when selectedValues prop changes
   useEffect(() => {
-    setSelected(defaultValues || []);
-  }, [defaultValues]);
+    if (selectedValues !== undefined) {
+      setSelected(selectedValues);
+    }
+  }, [selectedValues]);
 
-  const handleSelect = (value: string) => {
+  // Sync with defaultValues
+  useEffect(() => {
+    if (selectedValues === undefined) {
+      setSelected(defaultValues || []);
+    }
+  }, [defaultValues, selectedValues]);
+
+  const getOptionValue = (option: OptionType): string => {
+    return typeof option === 'string' ? option : option.value;
+  };
+
+  const getOptionLabel = (option: OptionType): string => {
+    return typeof option === 'string' ? option : option.label;
+  };
+
+  const handleSelect = (option: OptionType) => {
+    const value = getOptionValue(option);
     let updatedSelection = [...selected];
+    
     if (updatedSelection.includes(value)) {
       updatedSelection = updatedSelection.filter((v) => v !== value);
     } else {
       updatedSelection.push(value);
     }
-    setSelected(updatedSelection);
+    
+    // Only update local state if not controlled
+    if (selectedValues === undefined) {
+      setSelected(updatedSelection);
+    }
+    
+    // Call both callbacks for compatibility
     if (onSelect) onSelect(updatedSelection);
-
-    // Close dropdown after single selection
-    setOpen(false);
+    if (onChange) onChange(updatedSelection);
+    
+    // Don't close dropdown to allow multiple selections
+    // setOpen(false);
   };
 
   const handleClickOutside = (event: MouseEvent) => {
@@ -71,7 +105,17 @@ const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
     return () => window.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
 
-  const isSelected = (value: string) => selected.includes(value);
+  const isSelected = (option: OptionType) => {
+    const value = getOptionValue(option);
+    return selected.includes(value);
+  };
+
+  const getSelectedLabels = () => {
+    return selected.map(value => {
+      const option = options.find(opt => getOptionValue(opt) === value);
+      return option ? getOptionLabel(option) : value;
+    });
+  };
 
   return (
     <div
@@ -79,6 +123,7 @@ const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
       ref={dropdownRef}
     >
       <button
+        type="button"
         onClick={() => setOpen(!open)}
         className={`flex items-center justify-between border border-gray-300 rounded-md px-4 py-2 text-sm w-full ${className}`}
       >
@@ -86,7 +131,7 @@ const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
           {DropDownName && <span className="font-medium">{DropDownName}:</span>}
           {iconFirst && icon}
           <span className="truncate">
-            {selected.length > 0 ? selected.join(", ") : "Select options"}
+            {selected.length > 0 ? getSelectedLabels().join(", ") : placeholder}
           </span>
         </div>
         {!icon && <FaChevronDown className="text-xs ml-2" />}
@@ -105,7 +150,7 @@ const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
               className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer flex items-center justify-between"
               onClick={() => handleSelect(option)}
             >
-              <span>{option}</span>
+              <span>{getOptionLabel(option)}</span>
               {isSelected(option) && (
                 <RxCheck className="text-blue-600 text-lg" />
               )}

@@ -1,3 +1,346 @@
+// import React, { useState } from "react";
+// import Dropdown from "../../../components/Dropdown";
+// import Input from "../../../components/Input";
+// import DatePicker from "../../../components/DatePicker";
+// import CreatePurchaseReturnTable from "../../../components/CreatePurchaseReturnTable";
+// import ItemTable from "../../../components/ItemCategoryTable";
+// import { useNavigate } from "react-router-dom";
+// import Button from "../../../components/Button";
+// import { toast } from "react-toastify";
+// interface Column {
+//   header: string;
+//   accessor: string;
+//   type?: "text" | "image" | "status" | "actions";
+// }
+// interface FormData {
+//   supplierCompanyName: string;
+//   referenceNumber: string;
+//   dateOfReturning: string;
+//   paymentDueDate: string;
+//   barcode: string;
+//   termsAndConditions: string;
+// }
+
+// interface PurchaseInvoiceItem {
+//   userImage?: string;
+//   sno: string;
+//   barcode: string;
+//   refrenceNumber: string;
+//   productName: string;
+//   qty: number;
+//   previousBuying: string;
+//   costPrice: number;
+//   total: number;
+//   salePrice: number;
+//   action: string;
+//   itemId?: string;
+//   purchaseOrderId?: string;
+// }
+
+// const CreatePurchaseReturn: React.FC = () => {
+//   const [selectedUser, setSelectedUser] = useState(null);
+//   const [showDeleteModal, setShowDeleteModal] = useState(false);
+//   const [loading, setLoading] = useState(false);
+//   const [formData, setFormData] = useState<FormData>({
+//     supplierCompanyName: "",
+//     referenceNumber: "",
+//     dateOfReturning: "",
+//     paymentDueDate: "",
+//     barcode: "",
+//     termsAndConditions: "",
+//   });
+//   const [createPurchaseInvoiceData, setCreatePurchaseInvoiceData] = useState<
+//     PurchaseInvoiceItem[]
+//   >([]);
+
+//   const CreatePurchaseReturnColumn: Column[] = [
+//     { header: "S.no", accessor: "sno", type: "text" },
+//     // { header: "Product Name", accessor: "productName", type: "text" },
+//     { header: "Barcode", accessor: "barcode", type: "text" },
+//     { header: "P . Invoice", accessor: "pInvoice", type: "text" },
+//     { header: "Product Name", accessor: "productName", type: "text" },
+//     { header: "Qty", accessor: "qty", type: "text" },
+//     { header: "Cost Price ($)", accessor: "costPrice", type: "text" },
+//     {
+//       header: "Credit ($)",
+//       accessor: "credit",
+//       type: "text",
+//     },
+//     { header: "Status", accessor: "status", type: "status" },
+//     { header: "Actions", accessor: "actions", type: "actions" }, // Optional: only if you're handling actions
+//   ];
+
+//   const CreatePurchaseReturnData = [
+//     {
+//       sno: "01",
+//       barcode: "423432",
+//       pInvoice: "PI-27832",
+//       productName: "Enchanted Locket",
+//       qty: 3,
+//       credit: "1300",
+//       costPrice: "1200",
+//       status: "Paid",
+//       action: "eye",
+//     },
+//     {
+//       sno: "01",
+//       barcode: "423432",
+//       pInvoice: "PI-27832",
+//       productName: "Enchanted Locket",
+//       qty: 3,
+//       credit: "100",
+//       costPrice: "1200",
+//       status: "Partially Paid",
+//       action: "eye",
+//     },
+//     {
+//       sno: "01",
+//       barcode: "423432",
+//       pInvoice: "PI-27832",
+//       productName: "Enchanted Locket",
+//       qty: 3,
+//       credit: "200",
+//       costPrice: "1200",
+//       status: "Unpaid",
+//       action: "eye",
+//     },
+//   ];
+
+//   const handleInputChange = (field: keyof FormData, value: string) => {
+//     setFormData((prev) => ({
+//       ...prev,
+//       [field]: value,
+//     }));
+//   };
+//   // Validate add item form
+//   const validateAddItem = () => {
+//     if (!formData.barcode.trim()) {
+//       toast.error("Please enter either barcode");
+//       return false;
+//     }
+//     return true;
+//   };
+
+//   // Get auth token from localStorage or wherever you store it
+//   const getAuthToken = () => {
+//     let token = localStorage.getItem("token");
+//     if (!token) {
+//       token = sessionStorage.getItem("token");
+//     }
+//     return token;
+//   };
+
+//   const fetchItemByBarcode = async (barcodeValue: string) => {
+//     try {
+//       const token = getAuthToken();
+//       if (!token) {
+//         toast.error("Authentication token not found. Please login again.");
+//         return;
+//       }
+
+//       setLoading(true);
+//       const API_URL =
+//         import.meta.env.VITE_BASE_URL || "http://192.168.100.18:9000";
+//       const response = await fetch(
+//         `${API_URL}/api/abid-jewelry-ms/getItemByBarcode`,
+//         {
+//           method: "POST",
+//           headers: {
+//             "x-access-token": token,
+//             "Content-Type": "application/json",
+//           },
+//           body: JSON.stringify({ barcode: barcodeValue }),
+//         }
+//       );
+
+//       const result = await response.json();
+
+//       if (result.success) {
+//         const item = result.data;
+//         const previousPrices = result.previousCostPricesHistory
+//           .slice(-3) // Get last 3
+//           .reverse() // Show newest first
+//           .map((history: any) => history.price)
+//           .join(" / ");
+
+//         console.log("item createeeee", item);
+
+//         const newItem: PurchaseInvoiceItem = {
+//           userImage: item.itemImage ? `${API_URL}${item.itemImage}` : "",
+//           sno: (createPurchaseInvoiceData.length + 1)
+//             .toString()
+//             .padStart(2, "0"),
+//           barcode: item.barcode,
+//           refrenceNumber: item?.refrenceNumber || "N/A",
+//           productName: item.category?.name || "Unknown Product",
+//           qty: 0,
+//           previousBuying: previousPrices || "N/A",
+//           costPrice: 0,
+//           total: 0,
+//           salePrice: 0,
+//           action: "eye",
+//           itemId: item._id,
+//         };
+
+//         setCreatePurchaseInvoiceData((prev) => [...prev, newItem]);
+//         toast.success(`Item "${newItem.productName}" added successfully`);
+//       } else {
+//         toast.error(result.message || "Item not found with this barcode");
+//       }
+//     } catch (error) {
+//       console.error("Error fetching item by barcode:", error);
+//       toast.error(
+//         "Error fetching item. Please check your connection and try again."
+//       );
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   const handleAddItem = async () => {
+//     if (!validateAddItem()) {
+//       return;
+//     }
+
+//     const promises = [];
+
+//     if (formData.barcode.trim()) {
+//       promises.push(fetchItemByBarcode(formData.barcode.trim()));
+//     }
+
+//     // if (formData.purchaseOrderReference.trim()) {
+//     //   promises.push(
+//     //     fetchPurchaseOrderById(formData.purchaseOrderReference.trim())
+//     //   );
+//     // }
+
+//     await Promise.all(promises);
+
+//     // Clear inputs after adding
+//     setFormData((prev) => ({
+//       ...prev,
+//       barcode: "",
+//       purchaseOrderReference: "",
+//     }));
+//   };
+
+//   const navigate = useNavigate();
+//   return (
+//     <div className="mx-auto px-3 py-6 sm:px-4 md:px-6 xl:px-8 xl:py-6 w-full rounded-lg shadow-md">
+//       <h2 className="Source-Sans-Pro-font font-semibold text-[#5D6679] text-[20px] mb-2">
+//         <span
+//           onClick={() =>
+//             navigate("/dashboard/inventory/purchase-invoice", { replace: true })
+//           }
+//           className="cursor-pointer"
+//         >
+//           Purchase Return
+//         </span>{" "}
+//         / <span className="text-black">Create Purchase Return Invoice</span>
+//       </h2>
+
+//       <div className="bg-white p-6 rounded-md">
+//         <h2 className="text-2xl font-semibold text-[#056BB7] mb-3">
+//           Purchase Return
+//         </h2>
+//         <p className="font-bold text-gray-300 underline text-[20px] mb-3">
+//           Invoice #PR-837529
+//         </p>
+//         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 gap-y-6 mb-8 Poppins-font font-medium text-sm">
+//           <div className="flex flex-col">
+//             <label htmlFor="" className="mb-1">
+//               Supplier Company Name
+//             </label>
+//             <Dropdown
+//               options={["Ahad", "Zain", "Shahzain", "Sameed"]}
+//               defaultValue="Samaria"
+//               className="w-full"
+//             />
+//           </div>
+//           <div className="flex flex-col">
+//             <label htmlFor="" className="mb-1">
+//               Refrence Number
+//             </label>
+//             <Input
+//               placeholder="21321412"
+//               className="w-full outline-none"
+//               type="number"
+//             />
+//           </div>
+//           <div className="flex flex-col">
+//             <label htmlFor="" className="mb-1">
+//               Date of Returning
+//             </label>
+//             <DatePicker
+//               onChange={(e) => console.log(e.target.value)}
+//               type="date"
+//               className="w-full"
+//             />
+//           </div>
+//         </div>
+
+//         <div className="flex flex-col flex-1">
+//           <label htmlFor="barcode" className="mb-1">
+//             Barcode
+//           </label>
+//           <Input
+//             placeholder="55325084"
+//             className="w-full outline-none"
+//             type="text"
+//             value={formData.barcode}
+//             onChange={(e) => handleInputChange("barcode", e.target.value)}
+//           />
+//         </div>
+//         <div className="flex items-end justify-end lg:justify-end">
+//           <Button
+//             text={loading ? "Adding..." : "Add Item"}
+//             className="w-full sm:w-auto bg-blue-600 text-white hover:bg-blue-700 border-none px-4"
+//             onClick={handleAddItem}
+//             disabled={loading}
+//           />
+//         </div>
+
+//         <div className="mb-4">
+//           <CreatePurchaseReturnTable
+//             eye={true}
+//             columns={CreatePurchaseReturnColumn}
+//             data={CreatePurchaseReturnData}
+//             tableTitle="Purchase Invoice"
+//             tableDataAlignment="zone"
+//             onEdit={(row) => setSelectedUser(row)}
+//             onDelete={(row) => {
+//               setSelectedUser(row);
+//               setShowDeleteModal(true);
+//             }}
+//           />
+
+//           {/* <ItemTable
+//             eye={true}
+//             className=""
+//             // tableDataAlignment="zone"
+//             columns={columns}
+//             data={userData}
+//             // tableTitle="Zones"
+//             onEdit={(row) => setSelectedUser(row)} // ✅ This opens the modal
+//             onDelete={(row) => {
+//               setSelectedUser(row); // ✅ Use the selected user
+//               setShowDeleteModal(true); // ✅ Open the delete modal
+//             }}
+//           /> */}
+//         </div>
+
+//         <div className="flex justify-end">
+//           <button className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition">
+//             Create Invoice
+//           </button>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default CreatePurchaseReturn;
+
 import React, { useState, useEffect } from "react";
 import Dropdown from "../../../components/Dropdown";
 import Input from "../../../components/Input";
@@ -7,6 +350,7 @@ import { useNavigate } from "react-router-dom";
 import Button from "../../../components/Button";
 import { toast } from "react-toastify";
 import axios from "axios";
+import { hasPermission } from "../sections/CoreSettings";
 
 interface Column {
   header: string;
@@ -56,6 +400,15 @@ interface PurchaseReturnItem {
   mm?: string;
 }
 
+// getUserRole function
+const getUserRole = () => {
+  let role = localStorage.getItem("role");
+  if (!role) {
+    role = sessionStorage.getItem("role");
+  }
+  return role;
+};
+
 const CreatePurchaseReturn: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -64,6 +417,11 @@ const CreatePurchaseReturn: React.FC = () => {
     id: string;
     name: string;
   } | null>(null);
+
+  // Permission variables add
+  const userRole = getUserRole();
+  const isAdmin = userRole === "Admin" || userRole === "SuperAdmin";
+  const canCreate = isAdmin || hasPermission("Inventory", "create");
 
   //   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [formData, setFormData] = useState<FormData>({
@@ -94,6 +452,14 @@ const CreatePurchaseReturn: React.FC = () => {
   ];
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!canCreate) {
+      toast.error("You don't have permission to create purchase return");
+      navigate(-1)
+    }
+  }, [canCreate]);
+
 
   // Get auth token from localStorage or wherever you store it
   const getAuthToken = () => {

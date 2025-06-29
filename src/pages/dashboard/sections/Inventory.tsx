@@ -20,6 +20,9 @@ const PurchaseOrder = lazy(() => import("../Inventory/PurchaseOrder"));
 const CreatePurchaseInvoice = lazy(
   () => import("../Inventory/CreatePurchaseInvoice")
 );
+const UpdatePurchaseInvoice = lazy(
+  () => import("../Inventory/UpdatePurchaseInvoice")
+);
 const CreatePurchaseReturn = lazy(
   () => import("../Inventory/CreatePurchaseReturn")
 );
@@ -41,6 +44,10 @@ const Inventory: React.FC = () => {
           <Route
             path="purchase-invoice/create-purchase-invoice"
             element={<CreatePurchaseInvoice />}
+          />
+          <Route
+            path="purchase-invoice/update-purchase-invoice/:invoiceId"
+            element={<UpdatePurchaseInvoice />}
           />
           <Route
             path="purchase-return/create-purchase-return"

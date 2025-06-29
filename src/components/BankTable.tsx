@@ -67,7 +67,7 @@ const BankTable: React.FC<BankTableProps> = ({
   canDelete = true,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [deleteBank, setDeleteBank] = useState<any>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -96,6 +96,147 @@ const BankTable: React.FC<BankTableProps> = ({
         ...formData,
         description: e.target.value,
       });
+    }
+  };
+
+  // Function to fetch bank details for editing
+  const fetchBankDetails = async (bankId: string) => {
+    setIsSubmitting(true);
+    try {
+      if (!canUpdate) {
+        toast.error("You don't have permission to edit bank mode");
+        return;
+      }
+
+      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+      const token = getAuthToken();
+
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return false;
+      }
+
+      const response = await axios.get(
+        `${API_URL}/api/abid-jewelry-ms/getOneBank/${bankId}`,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        const bankData = response.data.data;
+        setFormData({
+          name: bankData.name,
+          description: bankData.description || "",
+          status:
+            bankData.status.charAt(0).toUpperCase() + bankData.status.slice(1),
+        });
+        return true;
+      } else {
+        toast.error(response.data.message || "Failed to fetch bank details");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error fetching bank details:", error);
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(
+            error.response.data.message || "Failed to fetch bank details"
+          );
+        }
+      } else {
+        toast.error("An unexpected error occurred while fetching bank details");
+      }
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Function to handle edit button click
+  const handleEditClick = async (row: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingRow(row);
+    const success = await fetchBankDetails(row._id);
+    if (success) {
+      setIsEditing(true);
+    }
+  };
+
+  // Function to handle bank update
+  const handleUpdateBank = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.name.trim()) {
+      toast.error("Bank name is required");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+      const token = getAuthToken();
+
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+
+      const payload = {
+        name: formData.name,
+        description: formData.description,
+        status: formData.status.toLowerCase(),
+      };
+
+      const response = await axios.put(
+        `${API_URL}/api/abid-jewelry-ms/updateBank/${editingRow._id}`,
+        payload,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Bank updated successfully!");
+
+        // Call the onEdit callback to update the parent component's state
+        if (onEdit) {
+          const updatedBank = {
+            ...editingRow,
+            name: formData.name,
+            description: formData.description,
+            status: formData.status,
+          };
+          onEdit(updatedBank);
+        }
+
+        // Close the edit modal
+        setIsEditing(false);
+      } else {
+        toast.error(response.data.message || "Failed to update bank");
+      }
+    } catch (error) {
+      console.error("Error updating bank:", error);
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(error.response.data.message || "Failed to update bank");
+        }
+      } else {
+        toast.error("An unexpected error occurred while updating bank");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -194,8 +335,139 @@ const BankTable: React.FC<BankTableProps> = ({
         <p className="text-[#056BB7] font-semibold text-[24px]">{tableTitle}</p>
 
         <div className="bg-white rounded-xl border border-gray-300 overflow-x-auto">
+          <table className="w-full text-sm text-left text-gray-700">
+            <thead className="bg-[#F9FAFB] text-black">
+              <tr className="font-semibold text-[16px] whitespace-nowrap w-full">
+                {columns.map((col, index) => {
+                  const isFirst = index === 0;
+                  const isLast = index === columns.length - 1;
+
+                  return (
+                    <th
+                      key={col.accessor}
+                      className="px-4 py-3 whitespace-nowrap text-left"
+                      style={{
+                        ...(isFirst && { width: "30%", whiteSpace: "nowrap" }),
+                        ...(isLast && { width: "9%", whiteSpace: "nowrap" }),
+                      }}
+                    >
+                      {col.header}
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody className="border-b border-gray-400">
+              {currentData.map((row, idx) => (
+                <tr
+                  key={idx}
+                  className="hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                  onClick={() => {
+                    if (onRowClick) {
+                      onRowClick(row);
+                    } else if (enableRowModal) {
+                      setSelectedUser(row);
+                    }
+                  }}
+                >
+                  {columns.map((col, index) => {
+                    const isFirst = index === 0;
+                    const isLast = index === columns.length - 1;
+
+                    return (
+                      <td
+                        key={col.accessor}
+                        className="px-4 py-2"
+                        style={{ width: "max-content" }}
+                      >
+                        <div className={`flex flex-row items-center`}>
+                          {(() => {
+                            switch (col.type) {
+                              case "image":
+                                return (
+                                  <div className="flex gap-2 items-center">
+                                    {row.userImage ? (
+                                      <>
+                                        <img
+                                          src={row.userImage}
+                                          alt="User"
+                                          className="w-8 h-8 rounded-full"
+                                        />
+                                        {row.name}
+                                      </>
+                                    ) : (
+                                      <>{row.name}</>
+                                    )}
+                                  </div>
+                                );
+                              case "status":
+                                return (
+                                  <span
+                                    className={`inline-block px-2 py-1 text-xs rounded-full ${
+                                      row.status === "Active"
+                                        ? "bg-green-100 text-green-600"
+                                        : "bg-red-100 text-red-600"
+                                    }`}
+                                  >
+                                    {row.status}
+                                  </span>
+                                );
+                              case "actions":
+                                return (
+                                  <div className="flex justify-end gap-2">
+                                    {eye && (
+                                      <LuEye
+                                        className="cursor-pointer"
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
+                                    )}
+
+                                    <RiEditLine
+                                      className="cursor-pointer"
+                                      onClick={(e) => handleEditClick(row, e)}
+                                    />
+
+                                    <AiOutlineDelete
+                                      className="cursor-pointer hover:text-red-500"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (!canDelete) {
+                                          toast.error(
+                                            "You don't have permission to delete bank mode"
+                                          );
+                                          return;
+                                        }
+                                        handleDeleteClick(row, e);
+                                      }}
+                                    />
+                                  </div>
+                                );
+
+                              default:
+                                return <>{row[col.accessor]}</>;
+                            }
+                          })()}
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+              {currentData.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={columns.length}
+                    className="text-center py-6 text-gray-500"
+                  >
+                    No data found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+
           {/* Pagination */}
-          <div
+        <div
             className={`flex flex-col ${
               dealBy ? "md:flex-col gap-3" : "md:flex-row"
             } items-center justify-between px-4 py-4`}
@@ -282,7 +554,13 @@ const BankTable: React.FC<BankTableProps> = ({
             <div className="flex items-center gap-2 mt-2 md:mt-0">
               <span className="text-sm">Show:</span>
               <Dropdown
-                options={["10 Row", "15 Row", "20 Row", "25 Row", "All"]}
+                options={[
+                  "10 Row",
+                  "15 Row",
+                  "20 Row",
+                  "25 Row",
+                  "All",
+                ]}
                 defaultValue="10 Row"
                 onSelect={(val) => {
                   if (val === "All") {

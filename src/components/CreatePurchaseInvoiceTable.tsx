@@ -125,9 +125,200 @@ const CreatePurchaseInvoiceTable: React.FC<CreatePurchaseInvoiceTableProps> = ({
   //     onItemUpdate(index, field, numericValue);
   //   }
   // };
+
+  const handleInputChange = (index: number, field: string, value: any) => {
+    if (onItemUpdate) {
+      // For numeric fields, only convert to number if value is not empty
+      const processedValue =
+        field === "qty" || field === "costPrice" || field === "salePrice"
+          ? value === ""
+            ? ""
+            : parseFloat(value) || ""
+          : value;
+      onItemUpdate(index, field, processedValue);
+    }
+  };
+
+  const handleDeleteRow = (index: number) => {
+    if (onDeleteItem) {
+      onDeleteItem(index);
+    }
+    setShowDeleteModal(false);
+    setDeleteUser(null);
+  };
+
   return (
     <>
       <div className="bg-white rounded-xl border border-gray-300 overflow-x-auto">
+        <table className="w-full text-sm text-left text-gray-700">
+          <thead className="bg-[#F9FAFB] text-black">
+            <tr className="font-semibold text-[16px] whitespace-nowrap w-full">
+              {columns.map((col, index) => {
+                const isFirst = index === 0;
+                const isLast = index === columns.length - 1;
+
+                return (
+                  <th
+                    key={col.accessor}
+                    className="px-3 py-3"
+                    style={{ width: "max-content" }}
+                  >
+                    <div
+                      className={`flex flex-row items-center ${
+                        isFirst
+                          ? "justify-start"
+                          : isLast
+                          ? "justify-end"
+                          : tableDataAlignment === "zone"
+                          ? "justify-center"
+                          : "justify-start"
+                      }`}
+                    >
+                      {col.header}
+                    </div>
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody className="border-gray-400">
+            {currentData.map((row, idx) => (
+              <tr key={idx} className="hover:bg-gray-50 whitespace-nowrap">
+                {columns.map((col, index) => {
+                  const isFirst = index === 0;
+                  const isLast = index === columns.length - 1;
+
+                  return (
+                    <td
+                      key={col.accessor}
+                      className="px-3 py-2"
+                      style={{ width: "max-content" }}
+                    >
+                      <div
+                        className={`flex flex-row items-center ${
+                          isFirst
+                            ? "justify-start"
+                            : isLast
+                            ? "justify-center"
+                            : tableDataAlignment === "zone"
+                            ? "justify-center"
+                            : "justify-start"
+                        }`}
+                      >
+                        {(() => {
+                          switch (col.type) {
+                            case "image":
+                              return (
+                                <div className="flex gap-2 items-center">
+                                  {row.userImage ? (
+                                    <>
+                                      <img
+                                        src={row.userImage}
+                                        alt="Product"
+                                        className="w-8 h-8 rounded-full object-cover"
+                                      />
+                                      {row.productName}
+                                    </>
+                                  ) : (
+                                    <>{row.productName}</>
+                                  )}
+                                </div>
+                              );
+                            case "status":
+                              return (
+                                <span
+                                  className={`inline-block px-2 py-1 text-xs rounded-full ${
+                                    row.status === "Active"
+                                      ? "bg-green-100 text-green-600"
+                                      : "bg-red-100 text-red-600"
+                                  }`}
+                                >
+                                  {row.status}
+                                </span>
+                              );
+                            case "input":
+                              return (
+                                // <input
+                                //   type="number"
+                                //   value={row[col.accessor]}
+                                //   onChange={(e) =>
+                                //     handleInputChange(
+                                //       idx,
+                                //       col.accessor,
+                                //       e.target.value
+                                //     )
+                                //   }
+                                //   className="w-20 px-2 py-1 border border-gray-300 rounded text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                //   min="0"
+                                //   step={col.accessor === "qty" ? "1" : "0.01"}
+                                // />
+
+                                <input
+                                  type="number"
+                                  value={
+                                    row[col.accessor] === 0
+                                      ? ""
+                                      : row[col.accessor]
+                                  }
+                                  onChange={(e) =>
+                                    handleInputChange(
+                                      idx,
+                                      col.accessor,
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  min="0"
+                                  step={col.accessor === "qty" ? "1" : "0.01"}
+                                  placeholder="0"
+                                  onWheel={(e : any) => e.target.blur()}
+                                />
+                              );
+                            case "actions":
+                              return (
+                                <div className="flex justify-end gap-2">
+                                  {eye && (
+                                    <LuEye
+                                      className="cursor-pointer text-blue-600 hover:text-blue-800"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowPurchaseOrderDetailModal(row);
+                                      }}
+                                    />
+                                  )}
+                                  <AiOutlineDelete
+                                    className="cursor-pointer text-red-600 hover:text-red-800"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setShowDeleteModal(true);
+                                      setDeleteUser({ ...row, index: idx });
+                                    }}
+                                  />
+                                </div>
+                              );
+                            default:
+                              return <>{row[col.accessor]}</>;
+                          }
+                        })()}
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+            {currentData.length === 0 && (
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className="text-center py-6 text-gray-500"
+                >
+                  No items added yet. Use the "Add Item" button to add products.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* <div className="mt-5">

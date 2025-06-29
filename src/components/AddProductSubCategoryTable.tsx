@@ -88,7 +88,7 @@ const AddProductSubCategoryTable: React.FC<AddProductSubCategoryTableProps> = ({
   canDelete = true,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedUser, setSelectedUser] = useState<any>(null); // for modal
   const [deleteZone, setDeleteZone] = useState<any>(null); // for modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -634,6 +634,8 @@ const AddProductSubCategoryTable: React.FC<AddProductSubCategoryTableProps> = ({
                         options={categoryOptions}
                         defaultValue={selectedCategory}
                         onSelect={(val) => setSelectedCategory(val)}
+                        noResultsMessage="No category found"
+                        searchable={true} // Add this prop
                       />
                     </div>
                   </div>

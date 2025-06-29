@@ -1,704 +1,508 @@
-import React, { useState, useEffect } from "react";
-import { AiOutlineDelete } from "react-icons/ai";
-import { RiEditLine } from "react-icons/ri";
-import { GoChevronLeft, GoChevronRight } from "react-icons/go";
-import { LuEye } from "react-icons/lu";
-import axios from "axios";
-import { toast } from "react-toastify";
-
-import chainforModalImage from "../assets/chainforModalImage.png";
-import Input from "./Input";
-import Dropdown from "./Dropdown";
+import React, { useState } from "react";
+import { LuEye, LuChevronDown, LuChevronUp } from "react-icons/lu";
+import { RiFileList2Line } from "react-icons/ri";
 import Button from "./Button";
-import DatePicker from "./DatePicker";
-import { Navigate, useNavigate } from "react-router-dom";
-import { IoIosPrint } from "react-icons/io";
-import HorizontalLinearAlternativeLabelStepper from "./HorizontalLinearAlternativeLabelStepper";
-import { FaDownload } from "react-icons/fa";
+import noseRing from "../assets/noseRing.png";
+import chain from "../assets/chain.png";
+import InvoiceDetailModal, {
+  Column as InvoiceColumn,
+  ColumnType as InvoiceColumnType,
+} from "../pages/dashboard/Inventory/InvoiceDetailModal";
 
-// Helper function to get auth token
-const getAuthToken = () => {
-  let token = localStorage.getItem("token");
-  if (!token) {
-    token = sessionStorage.getItem("token");
-  }
-  return token;
-};
+interface PurchaseInvoiceDetail {
+  itemdescription: string;
+  qty: number;
+  rate: number;
+  amount: number;
+  productName: string;
+  userImage?: any;
+  prInvoiceNumber?: string;
+  itemName?: string;
+  prTotal?: number;
+  date?: string;
+}
 
-// Add export to the type definition
-export type ColumnType =
+type ColumnType =
+  | "select"
   | "text"
   | "image"
   | "status"
   | "actions"
   | "button"
-  | "custom";
+  | "custom"
+  | "refrence";
 
-export interface Column {
+interface Column {
   header: string;
   accessor: string;
   type?: ColumnType;
 }
 
-export interface User {
-  id: string;
-  name: string;
-  role: string;
-  status: string;
-  userImage?: string;
-  [key: string]: any;
-}
-
-interface ViewAllCustomerTableProps {
+interface CustomerDetailTableProps {
   columns: Column[];
   data: any[];
   tableTitle?: string;
-  rowsPerPageOptions?: number[];
-  defaultRowsPerPage?: number;
-  searchable?: boolean;
-  filterByStatus?: boolean;
-  onEdit?: (row: any) => void;
-  onDelete?: (row: any) => void;
-  tableDataAlignment?: "zone" | "user" | "center"; // Add more if needed
+  tableDataAlignment?: "zone" | "user" | "center";
   className?: string;
   onRowClick?: (row: any) => void;
-  dealBy?: boolean;
   enableRowModal?: boolean;
   eye?: boolean;
-  canUpdate?: boolean;
-  canDelete?: boolean;
+  selectedRows?: { [key: string]: boolean };
+  onRowSelect?: (rowId: string) => void;
+  showTitle?: boolean;
+  marginTop?: string;
 }
 
-const ViewAllCustomerTable: React.FC<ViewAllCustomerTableProps> = ({
-  eye,
+const CustomerDetailTable: React.FC<CustomerDetailTableProps> = ({
+  eye = true,
   enableRowModal = true,
   onRowClick,
   className,
   columns,
   data,
   tableTitle,
-  rowsPerPageOptions = [5, 10, 15],
-  defaultRowsPerPage = 5,
-  searchable = true,
-  filterByStatus = true,
-  onEdit,
-  onDelete,
-  tableDataAlignment = "start", // default
-  dealBy,
-  canUpdate = true,
-  canDelete = true,
+  tableDataAlignment = "start",
+  selectedRows = {},
+  onRowSelect = () => {},
+  showTitle = true,
+  marginTop = "",
 }) => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [selectedUser, setSelectedUser] = useState<any>(null); // for modal
-  const [deleteUser, setDeleteUser] = useState<any>(null); // for modal
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteModal, setDeleteModal] = useState(false);
-  const [search, setSearch] = useState(""); // Local search state
-  const [statusFilter, setStatusFilter] = useState("All"); // Status filter state
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingRow, setEditingRow] = useState<any>(null);
-  const [formData, setFormData] = useState<any>(null);
-  const [showPurchaseOrderDetailModal, setShowPurchaseOrderDetailModal] =
-    useState<any>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [fetchingCustomerDetails, setFetchingCustomerDetails] =
-    useState<boolean>(false);
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [ledgerInvoice, setLedgerInvoice] = useState<any>(null);
+  const [paymentDetail, setPaymentDetail] = useState<any>(null);
+  const [selectedPaymentRow, setSelectedPaymentRow] = useState<any>(null);
+  const [isOpen, setIsOpen] = useState(false);
 
-  const navigate = useNavigate();
+  const handleRowSelect = (rowId: string) => {
+    setSelectedPaymentRow((prev: any) => {
+      const newSelectedRows = { ...prev };
+      newSelectedRows[rowId] = !newSelectedRows[rowId];
 
-  const filteredData = data.filter((item) => {
-    // Create a version of the item without the status field for searching
-    const searchableItem = { ...item };
-    delete searchableItem.status;
+      // Log the selected row data
+      const selectedRow = payData.find((row) => row.invoice === rowId);
+      console.log("Selected/Deselected Row:", selectedRow);
 
-    const matchesSearch = Object.values(searchableItem)
-      .join(" ")
-      .toLowerCase()
-      .includes(search.toLowerCase());
-
-    const matchesStatus =
-      statusFilter === "All" || item.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  });
-
-  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-  const currentData = filteredData.slice(
-    (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
-  );
-
-  const handleChangePage = (page: number) => {
-    if (page >= 1 && page <= totalPages) setCurrentPage(page);
-  };
-  // Update the handleDeleteCustomer function:
-  const handleDeleteCustomer = async () => {
-    if (!deleteUser) return;
-
-    setIsDeleting(true);
-    try {
-      const API_URL =
-        import.meta.env.VITE_BASE_URL || "http://192.168.100.18:9000";
-      const token = getAuthToken();
-
-      if (!token) {
-        toast.error("Authentication token not found. Please login again.");
-        return;
-      }
-
-      const response = await axios.delete(
-        `${API_URL}/api/abid-jewelry-ms/deleteCustomer/${deleteUser.id}`,
-        {
-          headers: {
-            "x-access-token": token,
-          },
-        }
+      // Log all currently selected rows after update
+      const allSelectedRowIds = Object.keys(newSelectedRows).filter(
+        (id) => newSelectedRows[id]
       );
+      const allSelectedRowData = payData.filter((row) =>
+        allSelectedRowIds.includes(row.invoice)
+      );
+      console.log("All Selected Rows:", allSelectedRowData);
 
-      if (response.data.success) {
-        toast.success("Customer deleted successfully!");
-        setShowDeleteModal(false);
-        setDeleteModal(true);
-
-        // Set a timeout to close the success modal and refresh data
-        setTimeout(() => {
-          setDeleteModal(false);
-          setDeleteUser(null);
-
-          // Call the parent callback to refresh data instead of page reload
-          if (onDelete) {
-            onDelete(null);
-          }
-        }, 1500);
-      } else {
-        toast.error(response.data.message || "Failed to delete customer");
-      }
-    } catch (error) {
-      console.error("Error deleting customer:", error);
-      if (axios.isAxiosError(error) && error.response) {
-        toast.error(error.response.data.message || "Failed to delete customer");
-      } else {
-        toast.error("An error occurred while deleting the customer");
-      }
-    } finally {
-      setIsDeleting(false);
-    }
+      return newSelectedRows;
+    });
+  };
+  // Sample invoice detail data for expanded rows
+  const invoiceDetailData: { [key: string]: PurchaseInvoiceDetail[] } = {
+    "#78965": [
+      {
+        date: "13/1/2025",
+        prInvoiceNumber: "PR-123",
+        itemName: "Enchanted Locket",
+        qty: 2,
+        prTotal: 1000,
+        itemdescription: "PI-1234",
+        rate: 500,
+        amount: 1000,
+        productName: "Enchanted Locket",
+      },
+    ],
+    "#45632": [
+      {
+        date: "15/1/2025",
+        prInvoiceNumber: "PR-124",
+        itemName: "Gold Ring",
+        qty: 1,
+        prTotal: 200,
+        itemdescription: "PI-1235",
+        rate: 200,
+        amount: 200,
+        productName: "Gold Ring",
+      },
+    ],
+    "#53455": [
+      {
+        date: "18/1/2025",
+        prInvoiceNumber: "PR-125",
+        itemName: "Silver Chain",
+        qty: 3,
+        prTotal: 456,
+        itemdescription: "PI-1236",
+        rate: 152,
+        amount: 456,
+        productName: "Silver Chain",
+      },
+    ],
+    "#31247": [
+      {
+        date: "05/2/2025",
+        prInvoiceNumber: "PR-126",
+        itemName: "Diamond Bracelet",
+        qty: 1,
+        prTotal: 500,
+        itemdescription: "PI-1237",
+        rate: 500,
+        amount: 500,
+        productName: "Diamond Bracelet",
+      },
+    ],
   };
 
-  const productDetails = {
-    sku: "Chain",
-    barcode: "Eternal Glow",
-    category: "Chain",
-    subCategory: "Eternal Glow",
-    style: "Cuban",
-    goldCategory: "10K",
-    diamondWeight: "4.5 CWT",
-    goldWeight: "150 gms",
-    length: '18"',
-    mm: "8mm",
-    size: "7",
-    costPrice: "15.50",
+  const payColumns: Column[] = [
+    { header: "Invoice", accessor: "invoice" },
+    { header: "Invoice Date", accessor: "invoiceDate" },
+    { header: "Status", accessor: "status", type: "status" },
+    { header: "Debit ($)", accessor: "debit", type: "text" },
+    { header: "Credit ($)", accessor: "credit", type: "text" },
+    { header: "Balance ($)", accessor: "balance", type: "text" },
+  ];
+
+  // All data with month information
+  const payData = [
+    {
+      invoice: "#78965",
+      invoiceDate: "15/2/2025",
+      status: "Partially Paid",
+      debit: "300",
+      balance: "100",
+      credit: "0",
+      refrenceNo: 785643,
+      month: "February",
+    },
+    {
+      invoice: "#45632",
+      invoiceDate: "28/2/2025",
+      status: "Paid",
+      debit: "200",
+      balance: "200",
+      credit: "0",
+      refrenceNo: 678934,
+      month: "February",
+    },
+    {
+      invoice: "#53455",
+      invoiceDate: "06/2/2025",
+      status: "Unpaid",
+      debit: "456",
+      balance: "120",
+      credit: "1",
+      refrenceNo: 678934,
+      month: "February",
+    },
+  ];
+
+  const purchaseInvoiceData = [
+    {
+      itemdescription: "PI-1234",
+      qty: 1234,
+      rate: 200,
+      amount: 1100,
+      productName: "Ring - Women - Cuban - 10k - 4.5CWT",
+      userImage: noseRing,
+    },
+    {
+      itemdescription: "PI-1234",
+      qty: 123,
+      rate: 200,
+      amount: 1100,
+      productName: "Bracelet - Men - Cuban - 10k - 4.5CWT",
+      userImage: chain,
+    },
+  ];
+  const purchaseInvoiceColumns: InvoiceColumn[] = [
+    { header: "Product Name", accessor: "productName", type: "image" },
+    { header: "QTY", accessor: "qty" },
+    { header: "RATE ($)", accessor: "rate" },
+    { header: "AMOUNT ($)", accessor: "amount" },
+  ];
+  // Toggle row expansion
+  const toggleRowExpansion = (invoiceId: string) => {
+    if (expandedRow === invoiceId) {
+      setExpandedRow(null);
+    } else {
+      setExpandedRow(invoiceId);
+    }
   };
 
   return (
     <>
-      <div
-        className={`bg-white rounded-xl p-4 flex flex-col gap-5 overflow-hidden shadow-md ${className}`}
-      >
-        {/* Search + Filter */}
-        <div
-          className={`grid gap-4 items-center justify-between md:grid-cols-2 ${
-            data.some((item) => item.hasOwnProperty("status"))
-              ? ""
-              : "grid-cols-2"
-          }`}
-        >
-          <div className="flex gap-3">
-            {searchable && (
-              <Input
-                placeholder="Search name, ID"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-auto !rounded-3xl outline-none "
-              />
-            )}
-
-            <Dropdown
-              options={["All", "Active", "Inactive"]}
-              DropDownName="Status"
-              defaultValue="All"
-              onSelect={(val) => {
-                setStatusFilter(val);
-                setCurrentPage(1);
-              }}
-            />
-          </div>
-          <div
-            className={`flex md:justify-end ${
-              data.some((item) => item.hasOwnProperty("status"))
-                ? "justify-start"
-                : "justify-end"
-            }`}
-          >
-            <Button
-              text="Export"
-              variant="border"
-              className="bg-[#5D6679] text-white w-24"
-            />
-          </div>
+      {/* Table Title */}
+      {showTitle && (
+        <div className={`flex justify-between w-full ${marginTop}`}>
+          <p className="text-[#5D6679] font-semibold text-[24px] pl-6">
+            {tableTitle}
+          </p>
         </div>
+      )}
 
-        <p className="text-[#056BB7] font-semibold text-[24px]">{tableTitle}</p>
-
-        {/* Table */}
-        <div className="bg-white rounded-xl border border-gray-300 overflow-x-auto">
-
-          {/* Pagination */}
-          <div
-            className={`flex flex-col ${
-              dealBy ? "md:flex-col gap-3" : "md:flex-row"
-            } items-center justify-between px-4 py-4`}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <button
-                onClick={() => handleChangePage(currentPage - 1)}
-                className="w-10 h-10 rounded-full border border-gray-300 hover:bg-gray-200 flex items-center justify-center"
-              >
-                <GoChevronLeft size={18} />
-              </button>
-
-              {[1, 2, 3, 10].map((num, idx) => (
-                <React.Fragment key={num}>
-                  {idx === 3 && (
-                    <div>
-                      <span className="text-gray-500 px-0.5">•</span>
-                      <span className="text-gray-500 px-0.5">•</span>
-                      <span className="text-gray-500 px-0.5">•</span>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => handleChangePage(num)}
-                    className={`w-8 h-8 rounded-full text-sm flex items-center justify-center transition ${
-                      currentPage === num
-                        ? "bg-[#407BFF] text-white"
-                        : "bg-[#E5E7EB] text-black hover:bg-[#407BFF] hover:text-white"
-                    }`}
-                  >
-                    {num}
-                  </button>
-                </React.Fragment>
+      {/* Table */}
+      <div className="bg-white rounded-xl border border-gray-300 overflow-x-auto">
+        <table className="w-full text-sm text-left text-gray-700">
+          <thead className="bg-[#F9FAFB] text-black">
+            <tr className="font-semibold text-[16px] whitespace-nowrap w-full">
+              {columns.map((col) => (
+                <th
+                  key={col.accessor}
+                  className="px-6 py-3"
+                  style={{ width: "max-content" }}
+                >
+                  <div className="flex flex-row items-center justify-center">
+                    {col.header}
+                  </div>
+                </th>
               ))}
-
-              <button
-                onClick={() => handleChangePage(currentPage + 1)}
-                className="w-10 h-10 rounded-full border border-gray-300 hover:bg-gray-200 flex items-center justify-center"
-              >
-                <GoChevronRight size={18} />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2 mt-2 md:mt-0">
-              <span className="text-sm">Show:</span>
-              <Dropdown
-                options={["5 Row", "10 Row", "15 Row", "20 Row"]}
-                onSelect={(val) => {
-                  const selected = parseInt(val.split(" ")[0]);
-                  setRowsPerPage(selected);
-                  setCurrentPage(1);
-                }}
-                className="bg-black text-white rounded px-2 py-1 min-w-[90px]"
-              />
-            </div>
-          </div>
-        </div>
+            </tr>
+          </thead>
+          <tbody className="border-gray-400">
+            {data.map((row, idx) => (
+              <React.Fragment key={idx}>
+                <tr
+                  className="hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                  onClick={() => toggleRowExpansion(row.invoice)}
+                >
+                  {columns.map((col, index) => (
+                    <td
+                      key={col.accessor}
+                      className="px-6 py-2"
+                      style={{ width: "max-content" }}
+                    >
+                      <div className="flex flex-row items-center justify-center">
+                        {(() => {
+                          switch (col.type) {
+                            case "select":
+                              return (
+                                <div
+                                  className="flex gap-2 items-center"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedRows[row.invoice] || false}
+                                    onChange={(e) => {
+                                      e.stopPropagation();
+                                      onRowSelect(row.invoice);
+                                    }}
+                                    className="form-checkbox h-4 w-4 text-blue-600 cursor-pointer"
+                                  />
+                                </div>
+                              );
+                            case "image":
+                              return (
+                                <div className="flex gap-2 items-center">
+                                  {row.userImage ? (
+                                    <>
+                                      <img
+                                        src={
+                                          row.userImage || "/placeholder.svg"
+                                        }
+                                        alt="User"
+                                        className="w-8 h-8 rounded-full"
+                                      />
+                                      {row.productName}
+                                    </>
+                                  ) : (
+                                    <>{row.productName}</>
+                                  )}
+                                </div>
+                              );
+                            case "refrence":
+                              return (
+                                <div className="flex justify-center gap-2">
+                                  {typeof row.refrence === "number" ? (
+                                    <>
+                                      {row.refrence}
+                                      <RiFileList2Line
+                                        size={20}
+                                        className="cursor-pointer"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setPaymentDetail(row);
+                                        }}
+                                      />
+                                    </>
+                                  ) : (
+                                    <>{row.refrence}</>
+                                  )}
+                                </div>
+                              );
+                            case "status":
+                              return (
+                                <span
+                                  className={`inline-block px-2 py-1 text-xs rounded-full font-semibold ${
+                                    row.status === "Unpaid"
+                                      ? "text-black"
+                                      : row.status === "Paid"
+                                      ? "text-green-700"
+                                      : "text-orange-400"
+                                  }`}
+                                >
+                                  {row.status}
+                                </span>
+                              );
+                            case "actions":
+                              return (
+                                <div className="flex justify-center gap-2">
+                                  {eye && (
+                                    <LuEye
+                                      size={20}
+                                      className="cursor-pointer"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setLedgerInvoice(row);
+                                        setIsOpen(true);
+                                      }}
+                                    />
+                                  )}
+                                  {expandedRow === row.invoice ? (
+                                    <LuChevronUp size={20} />
+                                  ) : (
+                                    <LuChevronDown size={20} />
+                                  )}
+                                </div>
+                              );
+                            default:
+                              return <>{row[col.accessor]}</>;
+                          }
+                        })()}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+                {/* Expanded Row Content */}
+                {expandedRow === row.invoice && (
+                  <tr className="Inter-font">
+                    <td
+                      colSpan={columns.length}
+                      className="p-0 border-t border-gray-200"
+                    >
+                      <div className="bg-[#f0f7f3] p-4 transition-all duration-300 ease-in-out">
+                        <table className="w-full text-sm border border-gray-300 rounded-lg overflow-hidden">
+                          <thead className="bg-[#e6f0eb] text-black font-semibold">
+                            <tr>
+                              <th className="px-4 py-2 text-left">Date</th>
+                              <th className="px-4 py-2 text-left">
+                                PR Invoice Number
+                              </th>
+                              <th className="px-4 py-2 text-left">Item Name</th>
+                              <th className="px-4 py-2 text-center">QTY</th>
+                              <th className="px-4 py-2 text-right">
+                                PR Total ($)
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {invoiceDetailData[row.invoice]?.map(
+                              (detail, detailIdx) => (
+                                <tr key={detailIdx} className="bg-white">
+                                  <td className="px-4 py-2 text-left">
+                                    {detail.date}
+                                  </td>
+                                  <td className="px-4 py-2 text-left">
+                                    {detail.prInvoiceNumber}
+                                  </td>
+                                  <td className="px-4 py-2 text-left">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+                                        {detail.itemName?.charAt(0)}
+                                      </div>
+                                      {detail.itemName}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-2 text-center">
+                                    {detail.qty}
+                                  </td>
+                                  <td className="px-4 py-2 text-right">
+                                    {detail.prTotal}
+                                  </td>
+                                </tr>
+                              )
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            ))}
+            {data.length === 0 && (
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className="text-center py-6 text-gray-500"
+                >
+                  No data found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
-      {/* Edit Customer Modal */}
-      {isEditing && formData && (
+      {/* Payment Detail Modal (keeping from original code) */}
+      {/* {paymentDetail && (
         <div
           className="fixed inset-0 flex items-center justify-center bg-black/20 z-50"
-          onClick={() => setIsEditing(false)}
+          onClick={() => setPaymentDetail(null)}
         >
           <div
-            className="animate-scaleIn bg-white md:w-2xl lg:w-3xl sm:w-xl w-md md:h-auto h-[70vh] overflow-y-auto rounded-[7px] p-6 shadow-lg relative"
+            className="animate-scaleIn bg-white overflow-hidden w-[60vw] h-auto overflow-y-auto rounded-[7px] shadow-lg px-4 py-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="Source-Sans-Pro-font text-[#056BB7] font-semibold text-[24px] m-0">
-              Edit Customer
-            </p>
-            {fetchingCustomerDetails ? (
-              <div className="flex justify-center items-center h-full">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-              </div>
-            ) : (
-              <form
-                className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 lg:gap-4 xl:gap-4 text-[15px] Poppins-font font-medium"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleUpdateCustomer();
-                }}
-              >
-                {/* Left Side */}
-                <div className="space-y-4">
-                  <div className="flex flex-col">
-                    <label htmlFor="firstName" className="mb-1">
-                      First Name
-                    </label>
-                    <Input
-                      name="firstName"
-                      placeholder="First Name"
-                      className="outline-none focus:outline-none w-full"
-                      value={formData.firstName}
-                      onChange={handleFormChange}
-                    />
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label htmlFor="email" className="mb-1">
-                      Email
-                    </label>
-                    <Input
-                      name="email"
-                      placeholder="john@example.com"
-                      className="outline-none focus:outline-none w-full"
-                      value={formData.email}
-                      onChange={handleFormChange}
-                    />
-                  </div>
-
-                  <div className="flex flex-col w-full">
-                    <label className="mb-1">Date of Birth</label>
-                    <DatePicker
-                      onChange={handleDateChange}
-                      type={"calendar" === "calendar" ? "date" : "text"}
-                      className="w-full"
-                      value={formData.dob}
-                    />
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label htmlFor="address" className="mb-1">
-                      Address
-                    </label>
-                    <textarea
-                      name="address"
-                      placeholder="200 Peachtree St NW, Atlanta, GA 30303"
-                      rows={3}
-                      className="Poppins-font font-medium w-full px-4 py-2 border border-gray-300 rounded-md text-sm !focus:outline-none outline-none resize-none"
-                      value={formData.address}
-                      onChange={handleFormChange}
-                    ></textarea>
-                  </div>
-                </div>
-
-                {/* Right Side */}
-                <div className="space-y-4">
-                  <div className="flex flex-col">
-                    <label htmlFor="lastName" className="mb-1">
-                      Last Name
-                    </label>
-                    <Input
-                      name="lastName"
-                      placeholder="Last Name"
-                      className="outline-none focus:outline-none w-full"
-                      value={formData.lastName}
-                      onChange={handleFormChange}
-                    />
-                  </div>
-                  {/* <div className="flex flex-col">
-                  <label htmlFor="phoneNo" className="mb-1">
-                    Phone No
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-xl font-semibold text-[#056BB7]">Payment</h2>
+              <button className="bg-[#056BB7] text-white font-medium h-8 px-6 border-none rounded">
+                Print
+              </button>
+            </div>
+            <div className="flex items-center w-full mb-3">
+              <div className="w-1/2">
+                <div className="flex text-[15px] font-medium">
+                  <label htmlFor="" className="mb-1">
+                    Refrence Number: <span className="font-light">387193</span>
                   </label>
-                  <Input
-                    name="phoneNo"
-                    placeholder="+65 362783233"
-                    className="outline-none focus:outline-none w-full"
-                    value={formData.phone}
-                    onChange={handleFormChange}
-                  />
-                </div> */}
-
-                  <div className="flex flex-col">
-                    <label htmlFor="phone" className="mb-1">
-                      Phone No
-                    </label>
-                    <Input
-                      name="phone" // Fix: change from "phoneNo" to "phone"
-                      placeholder="+65 362783233"
-                      className="outline-none focus:outline-none w-full"
-                      value={formData.phone}
-                      onChange={handleFormChange}
-                    />
-                  </div>
-                  <div className="flex gap-2 flex-col">
-                    <div>
-                      <span className="text-sm font-medium">
-                        Customer Segmentation
-                      </span>
-                    </div>
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-2 text-sm border px-3 py-2 border-gray-200 rounded-md">
-                        <input
-                          type="radio"
-                          name="segmentation"
-                          value="frequentBuyers"
-                          className="accent-blue-600"
-                          checked={formData.segmentation === "frequentBuyers"}
-                          onChange={() =>
-                            handleSegmentationChange("frequentBuyers")
-                          }
-                        />
-                        Frequent buyers
-                      </label>
-                      <label className="flex items-center gap-2 text-sm border px-2 py-2 pr-8 border-gray-200 rounded-md">
-                        <input
-                          type="radio"
-                          name="segmentation"
-                          value="vip"
-                          className="accent-blue-600"
-                          checked={formData.segmentation === "vip"}
-                          onChange={() => handleSegmentationChange("vip")}
-                        />
-                        VIP
-                      </label>
-                    </div>
-                  </div>
                 </div>
-              </form>
-            )}
-            <div className="flex justify-end gap-4 mt-6">
-              <Button
-                text="Cancel"
-                className="px-6 !bg-[#F4F4F5] !border-none"
-                onClick={() => setIsEditing(false)}
-              />
-              <Button
-                text={isSubmitting ? "Updating..." : "Update"}
-                className="px-6 !bg-[#056BB7] border-none text-white"
-                onClick={handleUpdateCustomer}
-                disabled={isSubmitting}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div
-          className="fixed inset-0 flex items-center justify-center bg-black/20 z-50"
-          onClick={() => {
-            setShowDeleteModal(false);
-            setDeleteUser(null);
-          }}
-        >
-          <div
-            className="animate-scaleIn bg-white rounded-xl w-full max-w-md relative shadow-lg border-3 border-gray-300"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center py-4 px-6 shadow-[0_2px_2px_0_#00000026]">
-              <h2 className="text-xl font-medium">Delete {deleteUser?.name}</h2>
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="text-xl font-bold text-gray-500 hover:text-gray-700"
-              >
-                ×
-              </button>
-            </div>
-            <div className="mt-8 text-start pb-8 px-6 shadow-[0_2px_2px_0_#00000026]">
-              <h3 className="text-lg font-semibold mb-1">Delete Customer</h3>
-              <p className="text-sm text-gray-700">
-                Are you sure you want to delete this Customer?
-              </p>
-              <p className="text-sm text-red-600 font-medium mt-1">
-                This action cannot be undone.
-              </p>
-            </div>
-
-            <div className="flex justify-center gap-2 pb-3 py-4 px-6 shadow-[0_2px_2px_0_#00000026]">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="px-5 py-1 rounded-md hover:bg-gray-100 border-none shadow-[inset_0_0_4px_#00000026]"
-              >
-                Cancel
-              </button>
-              <Button
-                text={isDeleting ? "Deleting..." : "Delete"}
-                icon={<AiOutlineDelete />}
-                onClick={handleDeleteCustomer}
-                disabled={isDeleting}
-                className="!border-none px-5 py-1 bg-[#DC2626] hover:bg-red-700 text-white rounded-md flex items-center gap-1"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Update the delete success modal close handler: */}
-      {deleteModal && (
-        <div
-          className="fixed inset-0 flex items-center justify-center bg-black/20 z-50"
-          onClick={() => {
-            setDeleteModal(false);
-            setDeleteUser(null);
-            if (onDelete) {
-              onDelete(null);
-            }
-          }}
-        >
-          <div
-            className="animate-scaleIn bg-white rounded-xl w-full max-w-md relative shadow-lg border-3 border-gray-300"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center py-4 px-6 shadow-[0_2px_2px_0_#00000026]">
-              <h2 className="text-xl font-medium">Delete {deleteUser?.name}</h2>
-              <button
-                onClick={() => {
-                  setDeleteModal(false);
-                  setDeleteUser(null);
-                  if (onDelete) {
-                    onDelete(null);
-                  }
-                }}
-                className="text-xl font-bold text-gray-500 hover:text-gray-700"
-              >
-                ×
-              </button>
-            </div>
-            <div className="mt-8 text-start pb-8 px-6 shadow-[0_2px_2px_0_#00000026]">
-              <h3 className="text-lg font-semibold mb-1">Delete Customer</h3>
-              <p className="text-sm text-gray-700">
-                The Customer has been removed successfully.
-              </p>
-            </div>
-            <div className="flex justify-center gap-2 pb-3 py-4 px-6 shadow-[0_2px_2px_0_#00000026]">
-              <Button
-                text="OK"
-                onClick={() => {
-                  setDeleteModal(false);
-                  setDeleteUser(null);
-                  if (onDelete) {
-                    onDelete(null);
-                  }
-                }}
-                className="px-5 py-1 rounded-md bg-[#056BB7] text-white hover:bg-blue-700 border-none"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Product Detail Modal */}
-      {showPurchaseOrderDetailModal && (
-        <>
-          <div
-            className="fixed inset-0 flex items-center justify-center bg-black/20 z-50"
-            onClick={() => setShowPurchaseOrderDetailModal(null)}
-          >
-            <div
-              className="animate-scaleIn bg-white rounded-xl shadow-md p-4 w-[360px]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="mx-auto">
-                {/* Head Office Badge */}
-                <div className="flex mb-2 w-full">
-                  <div className="relative w-full">
-                    <span className="bg-blue-600 absolute top-2 left-0 text-white text-xs font-semibold px-2 py-1 rounded">
-                      HEADOFFICE
-                    </span>
-                    <img
-                      src={chainforModalImage}
-                      alt="Gold Chain"
-                      className="w-full h-[220px]"
-                    />
-                  </div>
+                <div className="flex text-[15px] font-medium">
+                  <label htmlFor="" className="mb-1">
+                    Payment Mode:{" "}
+                    <span className="font-light">Bank Transfer</span>
+                  </label>
                 </div>
-
-                {/* SKU and Barcode */}
-                <div className="flex flex-wrap justify-between items-center pb-2 text-[12px]">
-                  <span className="underline">
-                    <strong>SKU:</strong> RC9748
-                  </span>
-                  <span className="underline">
-                    <strong>BARCODE:</strong> RC9748
-                  </span>
+              </div>
+              <div className="w-1/2">
+                <div className="flex text-[15px] font-medium">
+                  <label htmlFor="" className="mb-1">
+                    Payment Date: <span className="font-light">11/4/2025</span>
+                  </label>
                 </div>
-
-                {/* Details Section */}
-                <div className="flex justify-between">
-                  <div className="w-3/5">
-                    <h3 className="font-bold text-gray-900 mb-2 text-sm">
-                      DETAIL:
-                    </h3>
-                    <div className="space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <p className="text-gray-600">Category:</p>
-                        <p className="font-medium">
-                          {productDetails?.category}
-                        </p>
-                      </div>
-                      <div className="flex justify-between">
-                        <p className="text-gray-600">Sub Category:</p>
-                        <p className="font-medium">
-                          {productDetails?.subCategory}
-                        </p>
-                      </div>
-                      <div className="flex justify-between">
-                        <p className="text-gray-600">Style:</p>
-                        <p className="font-medium">{productDetails?.style}</p>
-                      </div>
-                      <div className="flex justify-between">
-                        <p className="text-gray-600">Gold Category:</p>
-                        <p className="font-medium">
-                          {productDetails?.goldCategory}
-                        </p>
-                      </div>
-                      <div className="flex justify-between">
-                        <p className="text-gray-600">Diamond Weight:</p>
-                        <p className="font-medium">
-                          {productDetails?.diamondWeight}
-                        </p>
-                      </div>
-                      <div className="flex justify-between">
-                        <p className="text-gray-600">Gold Weight:</p>
-                        <p className="font-medium">
-                          {productDetails?.goldWeight}
-                        </p>
-                      </div>
-                      <div className="flex justify-between">
-                        <p className="text-gray-600">Length:</p>
-                        <p className="font-medium">{productDetails?.length}</p>
-                      </div>
-                      <div className="flex justify-between">
-                        <p className="text-gray-600">MM:</p>
-                        <p className="font-medium">{productDetails?.mm}</p>
-                      </div>
-                      <div className="flex justify-between">
-                        <p className="text-gray-600">Size:</p>
-                        <p className="font-medium">{productDetails?.size}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Cost Price */}
-                  <div className="w-2/5 pl-4 mt-8 text-right">
-                    <h3 className="font-bold text-sm text-gray-900 mb-2">
-                      COST PRICE:
-                    </h3>
-                    <p className="text-red-600 text-lg font-bold">
-                      ${productDetails?.costPrice}
-                    </p>
-                  </div>
+                <div className="flex text-[15px] font-medium">
+                  <label htmlFor="" className="mb-1">
+                    Bank: <span className="font-light">abc Bank</span>
+                  </label>
                 </div>
               </div>
             </div>
           </div>
-        </>
+        </div>
+      )} */}
+
+    
+
+      {isOpen && (
+        <InvoiceDetailModal
+          isOpen={isOpen}
+          onClose={() => {
+            setLedgerInvoice(null);
+            setIsOpen(false);
+          }}
+          columns={purchaseInvoiceColumns}
+          data={purchaseInvoiceData}
+        />
       )}
     </>
   );
 };
 
-export default ViewAllCustomerTable;
+export default CustomerDetailTable;

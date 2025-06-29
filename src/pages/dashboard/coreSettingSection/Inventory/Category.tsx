@@ -78,6 +78,49 @@ const Category: React.FC = () => {
           Category
         </p>
 
+        {/* <form
+          onSubmit={handleSubmit}
+          className="mt-4 grid gap-8 text-[15px] Poppins-font font-medium w-full grid-cols-2"
+        >
+          <div className="flex flex-col">
+            <label className="mb-1 text-black">Prefix</label>
+            <Input
+              placeholder="eg: TBHC"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              className="outline-none focus:outline-none"
+            />
+          </div>
+          <div className="flex justify-end font-medium gap-4 object-fit">
+            <Button
+              text="Save"
+              className="px-6 !bg-[#056BB7] border-none text-white"
+            />
+          </div>
+        </form> */}
+
+        <form
+          onSubmit={handleSubmit}
+          className="mt-4 grid gap-8 text-[15px] Poppins-font font-medium w-full grid-cols-1 md:grid-cols-2"
+        >
+          <div className="flex flex-col">
+            <label className="mb-1 text-black">Fields</label>
+            <Input
+              placeholder="Category Field Name"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              className="outline-none focus:outline-none"
+            />
+          </div>
+
+          {/* Make sure this div doesn't force height */}
+          <div className="flex justify-end items-end font-medium gap-4">
+            <Button
+              text="Save"
+              className="px-6 !bg-[#056BB7] border-none text-white"
+            />
+          </div>
+        </form>
       </div>
       <ZoneTable
         tableDataAlignment="zone"

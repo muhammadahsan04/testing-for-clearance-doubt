@@ -6,7 +6,7 @@ import Button from "../../../components/Button";
 import StoreTable from "../../../components/StoreTable";
 import { StatCard } from "../userManagementSections/OverAll";
 import AddZoneModal from "../../../components/AddZoneModal";
-import { hasPermission } from "../sections/CoreSettings";
+import { hasPermission } from "../sections/StoreManagement";
 
 interface Column {
   header: string;
@@ -156,6 +156,32 @@ const ViewAllStores: React.FC = () => {
     { header: "Zone", accessor: "zone" },
     { header: "Actions", accessor: "actions", type: "actions" },
   ];
+
+  // Handle edit and delete callbacks
+  const handleEdit = (row: any) => {
+    if (row === null) {
+      // This is a callback after edit is complete
+      fetchStores();
+    } else {
+      setSelectedUser(row);
+    }
+  };
+
+  const handleDelete = (row: any) => {
+    if (!canDelete) {
+      toast.error("You don't have permission to delete store");
+      return;
+    }
+
+    if (row === null) {
+      // This is a callback after delete is complete
+      fetchStores();
+    } else {
+      setSelectedUser(row);
+      setShowDeleteModal(true);
+    }
+  };
+
   return (
     <div className="mx-auto px-3 py-6 sm:px-4 md:px-6 xl:px-8 xl:py-6 space-y-6 lg:w-[100%] xl:w-full w-full overflow-x-hidden">
       <h2 className="Inter-font font-semibold text-[20px] mb-2">
@@ -188,7 +214,7 @@ const ViewAllStores: React.FC = () => {
 
       {loading ? (
         <div className="flex justify-center items-center h-40">
-          <p>Loading stores...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       ) : (
         <StoreTable

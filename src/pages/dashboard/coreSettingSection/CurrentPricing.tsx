@@ -151,6 +151,106 @@ const CurrentPricing: React.FC = () => {
     }
   };
 
+  // Handle Diamond price submission
+  const handleDiamondSubmit = async () => {
+    if (!canCreate) {
+      toast.error("You don't have permission to add Diamond Pricing");
+      return;
+    }
+
+    if (!diamondPrice) {
+      toast.error("Please enter a diamond price");
+      return;
+    }
+
+    if (!diamondDateRange || !diamondDateRange[0] || !diamondDateRange[1]) {
+      toast.error("Please select a date range for diamond pricing");
+      return;
+    }
+
+    // Extract the dates properly from dayjs objects
+    const startDate = diamondDateRange[0].$d; // Get the native Date object
+    const endDate = diamondDateRange[1].$d; // Get the native Date object
+
+    // Format dates as strings in YYYY-MM-DD format for API
+    const formattedStartDate =
+      startDate.getFullYear() +
+      "-" +
+      String(startDate.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(startDate.getDate()).padStart(2, "0");
+
+    const formattedEndDate =
+      endDate.getFullYear() +
+      "-" +
+      String(endDate.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(endDate.getDate()).padStart(2, "0");
+
+    // Check if start date is before end date
+    if (formattedStartDate >= formattedEndDate) {
+      toast.error("End date must be after the start date");
+      return;
+    }
+
+    setIsSubmittingDiamond(true);
+
+    try {
+      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+      const token = getAuthToken();
+
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+
+      const payload = {
+        name: `$${diamondPrice}`,
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
+      };
+
+      console.log("Diamond pricing payload:", payload); // Log the payload for debugging
+
+      const response = await axios.post(
+        `${API_URL}/api/abid-jewelry-ms/addDiamondPricing`,
+        payload,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Diamond pricing added successfully!");
+        // Reset form
+        setDiamondPrice("");
+        setDiamondDateRange(null);
+      } else {
+        toast.error(response.data.message || "Failed to add diamond pricing");
+      }
+    } catch (error) {
+      console.error("Error adding diamond pricing:", error);
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(
+            error.response.data.message || "Failed to add diamond pricing"
+          );
+        }
+      } else {
+        toast.error(
+          "An unexpected error occurred while adding diamond pricing"
+        );
+      }
+    } finally {
+      setIsSubmittingDiamond(false);
+    }
+  };
+
   return (
     <div className="w-full mx-auto px-3 py-6 sm:px-4 md:px-6 xl:px-8 xl:py-6 min-h-screen">
       <h2 className="Inter-font font-semibold text-[20px] mb-2">
@@ -161,7 +261,7 @@ const CurrentPricing: React.FC = () => {
         <div className="flex flex-col md:flex-row items-center gap-4 mb-6 ">
           <div className="flex flex-col w-full md:w-[45%]">
             <label className="font-semibold mb-1">
-              Gold ( $ )
+              Gold ( $ )<span className="text-red-500"> *</span>
               <span
                 className="text-[12px] text-[#007AFF] cursor-pointer ml-2 underline"
                 onClick={() => navigate("gold/history")}
@@ -179,7 +279,9 @@ const CurrentPricing: React.FC = () => {
           </div>
 
           <div className="flex flex-col w-full md:w-[40%]">
-            <label className="font-semibold mb-1">Date Range</label>
+            <label className="font-semibold mb-1">
+              Date Range <span className="text-red-500"> *</span>
+            </label>
             <RangePicker
               className="h-10 !text-gray-400 !border-[#D1D5DC]"
               value={goldDateRange}
@@ -195,7 +297,9 @@ const CurrentPricing: React.FC = () => {
           <div className="mt-2 md:mt-7 w-full md:w-[15%]">
             <Button
               text={isSubmittingGold ? "Saving..." : "Save"}
-              className="bg-[#007AFF] text-white w-full border-none"
+              className={`px-6 !bg-[#056BB7] border-none w-full text-white ${
+                isSubmittingGold ? "opacity-70 cursor-not-allowed" : ""
+              }`}
               onClick={handleGoldSubmit}
               disabled={isSubmittingGold}
             />
@@ -206,7 +310,7 @@ const CurrentPricing: React.FC = () => {
         <div className="flex flex-col md:flex-row items-center gap-4">
           <div className="flex flex-col w-full md:w-[45%]">
             <label className="font-semibold mb-1">
-              Diamond ( $ )
+              Diamond ( $ ) <span className="text-red-500"> *</span>
               <span
                 className="text-[12px] text-[#007AFF] cursor-pointer ml-2 underline"
                 onClick={() => navigate("diamond/history")}
@@ -224,7 +328,9 @@ const CurrentPricing: React.FC = () => {
           </div>
 
           <div className="flex flex-col w-full md:w-[40%]">
-            <label className="font-semibold mb-1">Date Range</label>
+            <label className="font-semibold mb-1">
+              Date Range <span className="text-red-500"> *</span>
+            </label>
             <RangePicker
               className="h-10 !text-gray-400 !border-[#D1D5DC]"
               value={diamondDateRange}
@@ -238,9 +344,17 @@ const CurrentPricing: React.FC = () => {
           </div>
 
           <div className="mt-2 md:mt-7 w-full md:w-[15%]">
-            <Button
+            {/* <Button
               text={isSubmittingDiamond ? "Saving..." : "Save"}
               className="bg-[#007AFF] text-white w-full border-none"
+              onClick={handleDiamondSubmit}
+              disabled={isSubmittingDiamond}
+            /> */}
+            <Button
+              text={isSubmittingDiamond ? "Saving..." : "Save"}
+              className={`px-6 !bg-[#056BB7] border-none w-full text-white ${
+                isSubmittingDiamond ? "opacity-70 cursor-not-allowed" : ""
+              }`}
               onClick={handleDiamondSubmit}
               disabled={isSubmittingDiamond}
             />

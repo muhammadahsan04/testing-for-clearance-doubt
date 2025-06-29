@@ -128,7 +128,7 @@ const CoreSettigns: React.FC = () => {
             element={<UpdateItemCategory />}
           />
           <Route path="all-item-category" element={<AllItemCategory />} />
-          <Route path="payment" element={<Payment />} />
+          <Route path="payment-mode" element={<Payment />} />
           <Route path="deal-by" element={<DealBy />} />
           <Route path="category" element={<Category />} />
           <Route path="sub-category" element={<SubCategory />} />

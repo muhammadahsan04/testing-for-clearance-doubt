@@ -25,11 +25,14 @@ import { PersistGate } from "redux-persist/integration/react";
 import { store, persistor } from "./redux/store";
 import App from "./App";
 import "./index.css";
+// import { HashRouter } from "react-router-dom";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <Provider store={store}>
     <PersistGate loading={null} persistor={persistor}>
-      <App />
+      {/* <HashRouter> */}
+        <App />
+      {/* </HashRouter> */}
     </PersistGate>
   </Provider>
 );

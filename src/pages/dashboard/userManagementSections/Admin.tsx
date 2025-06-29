@@ -44,7 +44,7 @@ const Admin: React.FC = () => {
       setLoading(true);
       const API_URL =
         import.meta.env.VITE_BASE_URL || "http://192.168.100.18:9000";
-      const token = getUserToken()
+      const token = getUserToken();
 
       if (!token) {
         toast.error("Authentication token not found. Please login again.");
@@ -63,14 +63,16 @@ const Admin: React.FC = () => {
 
       if (response.data.success) {
         const usersData = response.data.data || [];
-
+        console.log("response.data.data", response.data.data);
         // Filter only admin users
-        const adminUsers = usersData.filter(
-          (user: any) => user.role?.name === "Admin"
-        );
+        // Filter only admin users
+        const validAdminRoles = ["admin", "Admin"];
 
+        const adminUsers = usersData.filter((user: any) =>
+          validAdminRoles.includes(user.role?.name?.toLowerCase())
+        );
         setUsers(adminUsers);
-        console.log("Admin users:", adminUsers);
+        console.log("Sales users:", adminUsers);
       } else {
         setError("Failed to fetch admins");
         toast.error("Failed to fetch admin users");

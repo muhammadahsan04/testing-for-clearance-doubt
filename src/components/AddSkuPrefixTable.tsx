@@ -42,6 +42,8 @@ interface AddSkuPrefixTableProps {
   dealBy?: boolean;
   enableRowModal?: boolean;
   eye?: boolean;
+  canUpdate?: boolean;
+  canDelete?: boolean;
 }
 
 // Helper function to get auth token
@@ -62,16 +64,18 @@ const AddSkuPrefixTable: React.FC<AddSkuPrefixTableProps> = ({
   data,
   tableTitle,
   rowsPerPageOptions = [5, 10, 15],
-  defaultRowsPerPage = 5,
+  defaultRowsPerPage = 10,
   searchable = true,
   filterByStatus = true,
   onEdit,
   onDelete,
   tableDataAlignment = "start", // default
   dealBy,
+  canUpdate = true,
+  canDelete = true,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedUser, setSelectedUser] = useState<any>(null); // for modal
   const [deleteZone, setDeleteZone] = useState<any>(null); // for modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -93,6 +97,10 @@ const AddSkuPrefixTable: React.FC<AddSkuPrefixTableProps> = ({
   const fetchSkuPrefixDetails = async (prefixId: string) => {
     setLoadingPrefixDetails(true);
     try {
+      if (!canUpdate) {
+        toast.error("You don't have permission to edit sku prefix");
+        return;
+      }
       const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
       const token = getAuthToken();
 
@@ -196,6 +204,10 @@ const AddSkuPrefixTable: React.FC<AddSkuPrefixTableProps> = ({
           prefixName: prefixName,
           status: prefixStatus, // Update the status in the table
         };
+
+        // Close the edit modal first
+        setIsEditing(false);
+        setEditingRow(null);
 
         // Notify parent component about the update
         if (onEdit) {
@@ -306,6 +318,144 @@ const AddSkuPrefixTable: React.FC<AddSkuPrefixTableProps> = ({
 
         {/* Table */}
         <div className="bg-white rounded-xl border border-gray-300 overflow-x-auto">
+          <table className="w-full text-sm text-left text-gray-700 ">
+            <thead className="bg-[#F9FAFB] text-black">
+              <tr className="font-semibold text-[16px] whitespace-nowrap w-full">
+                {columns.map((col, index) => {
+                  const isFirst = index === 0;
+                  const isLast = index === columns.length - 1;
+
+                  return (
+                    <th
+                      key={col.accessor}
+                      className="px-4 py-3 whitespace-nowrap text-left"
+                      style={{
+                        ...(isFirst && { width: "30%", whiteSpace: "nowrap" }),
+                        ...(isLast && { width: "9%", whiteSpace: "nowrap" }),
+                      }}
+                    >
+                      {col.header}
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody className="border-b border-gray-400">
+              {currentData.map((row, idx) => (
+                <tr
+                  key={idx}
+                  className="hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                  onClick={() => {
+                    if (onRowClick) {
+                      onRowClick(row);
+                    } else if (enableRowModal) {
+                      setSelectedUser(row);
+                    }
+                  }}
+                >
+                  {columns.map((col, index) => {
+                    const isFirst = index === 0;
+                    const isLast = index === columns.length - 1;
+
+                    return (
+                      <td
+                        key={col.accessor}
+                        className="px-4 py-2"
+                        style={{ width: "max-content" }}
+                      >
+                        <div className={`flex flex-row items-center `}>
+                          {(() => {
+                            switch (col.type) {
+                              case "image":
+                                return (
+                                  <div className="flex gap-2 items-center">
+                                    {row.userImage ? (
+                                      <>
+                                        <img
+                                          src={row.userImage}
+                                          alt="User"
+                                          className="w-8 h-8 rounded-full"
+                                        />
+                                        {row.name}
+                                      </>
+                                    ) : (
+                                      <>{row.name}</>
+                                    )}
+                                  </div>
+                                );
+                              case "status":
+                                return (
+                                  <span
+                                    className={`inline-block px-2 py-1 text-xs rounded-full ${
+                                      row.status === "Active"
+                                        ? "bg-green-100 text-green-600"
+                                        : "bg-red-100 text-red-600"
+                                    }`}
+                                  >
+                                    {row.status}
+                                  </span>
+                                );
+                              case "actions":
+                                return (
+                                  <div className="flex justify-end gap-2">
+                                    {eye && (
+                                      <LuEye
+                                        className="cursor-pointer"
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
+                                    )}
+
+                                    <RiEditLine
+                                      className="cursor-pointer"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsEditing(true);
+                                        setEditingRow(row);
+                                        // Fetch SKU prefix details when edit button is clicked
+                                        fetchSkuPrefixDetails(row._id);
+                                      }}
+                                    />
+
+                                    <AiOutlineDelete
+                                      className="cursor-pointer hover:text-red-500"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (!canDelete) {
+                                          toast.error(
+                                            "You don't have permission to delete sku prefix"
+                                          );
+                                          return;
+                                        }
+                                        setShowDeleteModal(true);
+                                        setDeleteZone(row);
+                                      }}
+                                    />
+                                  </div>
+                                );
+
+                              default:
+                                return <>{row[col.accessor]}</>;
+                            }
+                          })()}
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+              {currentData.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={columns.length}
+                    className="text-center py-6 text-gray-500"
+                  >
+                    No data found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+
           {/* Pagination */}
           {/* <div
             className={`flex flex-col ${
@@ -316,39 +466,35 @@ const AddSkuPrefixTable: React.FC<AddSkuPrefixTableProps> = ({
               <button
                 onClick={() => handleChangePage(currentPage - 1)}
                 className="w-10 h-10 rounded-full border border-gray-300 hover:bg-gray-200 flex items-center justify-center"
-                disabled={currentPage === 1}
               >
                 <GoChevronLeft size={18} />
               </button>
 
               {[1, 2, 3, 10].map((num, idx) => (
                 <React.Fragment key={num}>
-                  {idx === 3 && totalPages > 3 && (
+                  {idx === 3 && (
                     <div>
                       <span className="text-gray-500 px-0.5">•</span>
                       <span className="text-gray-500 px-0.5">•</span>
                       <span className="text-gray-500 px-0.5">•</span>
                     </div>
                   )}
-                  {num <= totalPages && (
-                    <button
-                      onClick={() => handleChangePage(num)}
-                      className={`w-8 h-8 rounded-full text-sm flex items-center justify-center transition ${
-                        currentPage === num
-                          ? "bg-[#407BFF] text-white"
-                          : "bg-[#E5E7EB] text-black hover:bg-[#407BFF] hover:text-white"
-                      }`}
-                    >
-                      {num}
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleChangePage(num)}
+                    className={`w-8 h-8 rounded-full text-sm flex items-center justify-center transition ${
+                      currentPage === num
+                        ? "bg-[#407BFF] text-white"
+                        : "bg-[#E5E7EB] text-black hover:bg-[#407BFF] hover:text-white"
+                    }`}
+                  >
+                    {num}
+                  </button>
                 </React.Fragment>
               ))}
 
               <button
                 onClick={() => handleChangePage(currentPage + 1)}
                 className="w-10 h-10 rounded-full border border-gray-300 hover:bg-gray-200 flex items-center justify-center"
-                disabled={currentPage === totalPages}
               >
                 <GoChevronRight size={18} />
               </button>
@@ -367,6 +513,180 @@ const AddSkuPrefixTable: React.FC<AddSkuPrefixTableProps> = ({
               />
             </div>
           </div> */}
+
+          {/* <div
+            className={`flex flex-col ${
+              dealBy ? "md:flex-col gap-3" : "md:flex-row"
+            } items-center justify-between px-4 py-4`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => handleChangePage(currentPage - 1)}
+                className="w-10 h-10 rounded-full border border-gray-300 hover:bg-gray-200 flex items-center justify-center"
+                disabled={currentPage === 1}
+              >
+                <GoChevronLeft size={18} />
+              </button>
+
+              {Array.from(
+                { length: Math.min(totalPages, 4) },
+                (_, i) => i + 1
+              ).map((num) => (
+                <button
+                  key={num}
+                  onClick={() => handleChangePage(num)}
+                  className={`w-8 h-8 rounded-full text-sm flex items-center justify-center transition ${
+                    currentPage === num
+                      ? "bg-[#407BFF] text-white"
+                      : "bg-[#E5E7EB] text-black hover:bg-[#407BFF] hover:text-white"
+                  }`}
+                >
+                  {num}
+                </button>
+              ))}
+
+              {totalPages > 4 && (
+                <>
+                  <div>
+                    <span className="text-gray-500 px-0.5">•</span>
+                    <span className="text-gray-500 px-0.5">•</span>
+                    <span className="text-gray-500 px-0.5">•</span>
+                  </div>
+                  <button
+                    onClick={() => handleChangePage(totalPages)}
+                    className={`w-8 h-8 rounded-full text-sm flex items-center justify-center transition ${
+                      currentPage === totalPages
+                        ? "bg-[#407BFF] text-white"
+                        : "bg-[#E5E7EB] text-black hover:bg-[#407BFF] hover:text-white"
+                    }`}
+                  >
+                    {totalPages}
+                  </button>
+                </>
+              )}
+
+              <button
+                onClick={() => handleChangePage(currentPage + 1)}
+                className="w-10 h-10 rounded-full border border-gray-300 hover:bg-gray-200 flex items-center justify-center"
+                disabled={currentPage === totalPages}
+              >
+                <GoChevronRight size={18} />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 mt-2 md:mt-0">
+              <span className="text-sm">Show:</span>
+              <Dropdown
+                options={["5 Row", "10 Row", "15 Row", "20 Row"]}
+                onSelect={(val) => {
+                  const selected = Number.parseInt(val.split(" ")[0]);
+                  setRowsPerPage(selected);
+                  setCurrentPage(1);
+                }}
+                className="bg-black text-white rounded px-2 py-1 min-w-[90px]"
+              />
+            </div>
+          </div> */}
+
+          {/* <div className="flex items-center justify-center gap-2">
+            <button
+              onClick={() => handleChangePage(currentPage - 1)}
+              className="w-10 h-10 rounded-full border border-gray-300 hover:bg-gray-200 flex items-center justify-center"
+              disabled={currentPage === 1}
+            >
+              <GoChevronLeft size={18} />
+            </button>
+
+            {currentPage <= 4 ? (
+              Array.from(
+                { length: Math.min(totalPages, 4) },
+                (_, i) => i + 1
+              ).map((num) => (
+                <button
+                  key={num}
+                  onClick={() => handleChangePage(num)}
+                  className={`w-8 h-8 rounded-full text-sm flex items-center justify-center transition ${
+                    currentPage === num
+                      ? "bg-[#407BFF] text-white"
+                      : "bg-[#E5E7EB] text-black hover:bg-[#407BFF] hover:text-white"
+                  }`}
+                >
+                  {num}
+                </button>
+              ))
+            ) : (
+              <>
+                <button
+                  onClick={() => handleChangePage(1)}
+                  className="bg-[#E5E7EB] text-black hover:bg-[#407BFF] hover:text-white w-8 h-8 rounded-full text-sm flex items-center justify-center transition"
+                >
+                  1
+                </button>
+                <div>
+                  <span className="text-gray-500 px-0.5">•</span>
+                  <span className="text-gray-500 px-0.5">•</span>
+                  <span className="text-gray-500 px-0.5">•</span>
+                </div>
+                {[currentPage - 1, currentPage, currentPage + 1]
+                  .filter((page) => page > 1 && page <= totalPages)
+                  .map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => handleChangePage(num)}
+                      className={`w-8 h-8 rounded-full text-sm flex items-center justify-center transition ${
+                        currentPage === num
+                          ? "bg-[#407BFF] text-white"
+                          : "bg-[#E5E7EB] text-black hover:bg-[#407BFF] hover:text-white"
+                      }`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+              </>
+            )}
+
+            {totalPages > 4 &&
+              currentPage < totalPages - 1 &&
+              currentPage <= 4 && (
+                <>
+                  <div>
+                    <span className="text-gray-500 px-0.5">•</span>
+                    <span className="text-gray-500 px-0.5">•</span>
+                    <span className="text-gray-500 px-0.5">•</span>
+                  </div>
+                  <button
+                    onClick={() => handleChangePage(totalPages)}
+                    className="bg-[#E5E7EB] text-black hover:bg-[#407BFF] hover:text-white w-8 h-8 rounded-full text-sm flex items-center justify-center transition"
+                  >
+                    {totalPages}
+                  </button>
+                </>
+              )}
+
+            {totalPages > 4 &&
+              currentPage >= totalPages - 1 &&
+              currentPage > 4 && (
+                <button
+                  onClick={() => handleChangePage(totalPages)}
+                  className={`w-8 h-8 rounded-full text-sm flex items-center justify-center transition ${
+                    currentPage === totalPages
+                      ? "bg-[#407BFF] text-white"
+                      : "bg-[#E5E7EB] text-black hover:bg-[#407BFF] hover:text-white"
+                  }`}
+                >
+                  {totalPages}
+                </button>
+              )}
+
+            <button
+              onClick={() => handleChangePage(currentPage + 1)}
+              className="w-10 h-10 rounded-full border border-gray-300 hover:bg-gray-200 flex items-center justify-center"
+              disabled={currentPage === totalPages}
+            >
+              <GoChevronRight size={18} />
+            </button>
+          </div> */}
+
           <div
             className={`flex flex-col ${
               dealBy ? "md:flex-col gap-3" : "md:flex-row"
@@ -454,7 +774,13 @@ const AddSkuPrefixTable: React.FC<AddSkuPrefixTableProps> = ({
             <div className="flex items-center gap-2 mt-2 md:mt-0">
               <span className="text-sm">Show:</span>
               <Dropdown
-                options={["10 Row", "15 Row", "20 Row", "25 Row", "All"]}
+                options={[
+                  "10 Row",
+                  "15 Row",
+                  "20 Row",
+                  "25 Row",
+                  "All",
+                ]}
                 defaultValue="10 Row"
                 onSelect={(val) => {
                   if (val === "All") {
@@ -469,68 +795,11 @@ const AddSkuPrefixTable: React.FC<AddSkuPrefixTableProps> = ({
               />
             </div>
           </div>
-
-          <div
-            className={`flex flex-col ${
-              dealBy ? "md:flex-col gap-3" : "md:flex-row"
-            } items-center justify-between px-4 py-4`}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <button
-                onClick={() => handleChangePage(currentPage - 1)}
-                className="w-10 h-10 rounded-full border border-gray-300 hover:bg-gray-200 flex items-center justify-center"
-              >
-                <GoChevronLeft size={18} />
-              </button>
-
-              {[1, 2, 3, 10].map((num, idx) => (
-                <React.Fragment key={num}>
-                  {idx === 3 && (
-                    <div>
-                      <span className="text-gray-500 px-0.5">•</span>
-                      <span className="text-gray-500 px-0.5">•</span>
-                      <span className="text-gray-500 px-0.5">•</span>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => handleChangePage(num)}
-                    className={`w-8 h-8 rounded-full text-sm flex items-center justify-center transition ${
-                      currentPage === num
-                        ? "bg-[#407BFF] text-white"
-                        : "bg-[#E5E7EB] text-black hover:bg-[#407BFF] hover:text-white"
-                    }`}
-                  >
-                    {num}
-                  </button>
-                </React.Fragment>
-              ))}
-
-              <button
-                onClick={() => handleChangePage(currentPage + 1)}
-                className="w-10 h-10 rounded-full border border-gray-300 hover:bg-gray-200 flex items-center justify-center"
-              >
-                <GoChevronRight size={18} />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2 mt-2 md:mt-0">
-              <span className="text-sm">Show:</span>
-              <Dropdown
-                options={["5 Row", "10 Row", "15 Row", "20 Row"]}
-                onSelect={(val) => {
-                  const selected = parseInt(val.split(" ")[0]);
-                  setRowsPerPage(selected);
-                  setCurrentPage(1);
-                }}
-                className="bg-black text-white rounded px-2 py-1 min-w-[90px]"
-              />
-            </div>
-          </div>
         </div>
       </div>
 
       {/* Edit SKU Prefix Modal */}
-      {isEditing && (
+      {isEditing && canUpdate && (
         <>
           <div
             className="fixed inset-0 flex items-center justify-center bg-black/20 z-50"
@@ -597,7 +866,7 @@ const AddSkuPrefixTable: React.FC<AddSkuPrefixTableProps> = ({
       )}
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
+      {showDeleteModal && canDelete && (
         <div
           className="fixed inset-0 flex items-center justify-center bg-black/20 z-50 border"
           onClick={() => {
@@ -647,12 +916,12 @@ const AddSkuPrefixTable: React.FC<AddSkuPrefixTableProps> = ({
               <Button
                 text="Delete"
                 icon={<AiOutlineDelete />}
-                onClick={() => {
+                onClick={async () => {
                   if (onDelete && deleteZone) {
-                    onDelete(deleteZone);
+                    await onDelete(deleteZone); // Make sure to await the delete operation
                   }
                   setShowDeleteModal(false);
-                  setDeleteModal(true); // Show the success modal
+                  setDeleteModal(true);
                 }}
                 className="!border-none px-5 py-1 bg-[#DC2626] hover:bg-red-700 text-white rounded-md flex items-center gap-1"
               />

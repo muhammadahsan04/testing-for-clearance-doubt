@@ -141,6 +141,39 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
     size: "7",
     costPrice: "15.50",
   };
+  const fetchInventoryDetails = async (inventoryId: string) => {
+    setLoadingDetails(true);
+    try {
+      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+      const token = getAuthToken();
+
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+
+      const response = await axios.get(
+        `${API_URL}/api/abid-jewelry-ms/getOneInventory/${inventoryId}`,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setInventoryDetails(response.data.data);
+      } else {
+        toast.error("Failed to fetch inventory details");
+      }
+    } catch (error) {
+      console.error("Error fetching inventory details:", error);
+      toast.error("Failed to fetch inventory details");
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
   return (
     <>
       <div
@@ -240,6 +273,14 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                 <tr
                   key={idx}
                   className="hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                  // onClick={() => {
+                  //   // Custom behavior per table usage OLD
+                  //   if (onRowClick) {
+                  //     onRowClick(row);
+                  //   } else {
+                  //     setSelectedUser(row);
+                  //   }
+                  // }}
                   onClick={() => {
                     //NEW
                     if (onRowClick) {
@@ -301,6 +342,53 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                                     {row.status}
                                   </span>
                                 );
+                              // case "actions":
+                              //   return (
+                              //     <div className="flex justify-end gap-2">
+                              //       {eye && (
+                              //         <LuEye
+                              //           className="cursor-pointer"
+                              //           onClick={(e) => {
+                              //             e.stopPropagation();
+                              //             console.log("row", row);
+
+                              //             setShowPurchaseOrderDetailModal(row);
+                              //             //   console.log(showPurchaseOrderDetailModal.category , 'showPurchaseOrderDetailModal');
+
+                              //             // navigate("purchase-order-detail");
+                              //           }}
+                              //         />
+                              //       )}
+                              //       {/* <RiEditLine
+                              //         className="cursor-pointer"
+                              //         onClick={(e) => {
+                              //           e.stopPropagation();
+                              //           setIsEditing(true); // Set isEditing to true
+                              //           setEditingRow(row); // Store the row data in editingRow
+                              //         }}
+                              //       /> */}
+
+                              //       {/* <RiEditLine
+                              //         className="cursor-pointer"
+                              //         onClick={(e) => {
+                              //           e.stopPropagation();
+                              //           setIsEditing(true);
+                              //           setEditingRow(row);
+                              //           setFormData({ ...row }); // Initialize form data with the row data
+                              //         }}
+                              //       /> */}
+
+                              //       <AiOutlineDelete
+                              //         className="cursor-pointer hover:text-red-500"
+                              //         onClick={(e) => {
+                              //           e.stopPropagation();
+                              //           setShowDeleteModal(true);
+                              //           setDeleteUser(row);
+                              //         }}
+                              //       />
+                              //     </div>
+                              //   );
+
                               case "actions":
                                 return (
                                   <div className="flex justify-end gap-2">
@@ -309,7 +397,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                                         className="cursor-pointer"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          console.log("row", row);
+                                          // console.log("row", row);
                                           // Fetch detailed inventory data
                                           fetchInventoryDetails(row.id);
                                           setShowPurchaseOrderDetailModal(row);
@@ -326,7 +414,6 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                                           );
                                           return;
                                         }
-
                                         setShowDeleteModal(true);
                                         setDeleteUser(row);
                                       }}
@@ -457,6 +544,110 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
           </div>
         </div>
       </div>
+
+      {/* {showPurchaseOrderDetailModal && (
+        <>
+          <div
+            className="fixed inset-0 flex items-center justify-center bg-black/20 z-50"
+            onClick={() => setShowPurchaseOrderDetailModal(null)}
+          >
+            <div
+              className="animate-scaleIn bg-white rounded-xl shadow-md p-4 w-[360px]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mx-auto">
+
+                <div className="flex mb-2 w-full">
+                  <div className="relative w-full">
+                    <span className="bg-blue-600 absolute top-2 left-0 text-white text-xs font-semibold px-2 py-1 rounded">
+                      HEADOFFICE
+                    </span>
+                    <img
+                      src={chainforModalImage}
+                      alt="Gold Chain"
+                      className="w-full h-[220px]"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap justify-between items-center pb-2 text-[12px]">
+                  <span className="underline">
+                    <strong>SKU:</strong> RC9748
+                  </span>
+                  <span className="underline">
+                    <strong>BARCODE:</strong> RC9748
+                  </span>
+                </div>
+        
+                <div className="flex justify-between">
+                  <div className="w-3/5">
+                    <h3 className="font-bold text-gray-900 mb-2 text-sm">
+                      DETAIL:
+                    </h3>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <p className="text-gray-600">Category:</p>
+                        <p className="font-medium">
+                          {productDetails?.category}
+                        </p>
+                      </div>
+                      <div className="flex justify-between">
+                        <p className="text-gray-600">Sub Category:</p>
+                        <p className="font-medium">
+                          {productDetails?.subCategory}
+                        </p>
+                      </div>
+                      <div className="flex justify-between">
+                        <p className="text-gray-600">Style:</p>
+                        <p className="font-medium">{productDetails?.style}</p>
+                      </div>
+                      <div className="flex justify-between">
+                        <p className="text-gray-600">Gold Category:</p>
+                        <p className="font-medium">
+                          {productDetails?.goldCategory}
+                        </p>
+                      </div>
+                      <div className="flex justify-between">
+                        <p className="text-gray-600">Diamond Weight:</p>
+                        <p className="font-medium">
+                          {productDetails?.diamondWeight}
+                        </p>
+                      </div>
+                      <div className="flex justify-between">
+                        <p className="text-gray-600">Gold Weight:</p>
+                        <p className="font-medium">
+                          {productDetails?.goldWeight}
+                        </p>
+                      </div>
+                      <div className="flex justify-between">
+                        <p className="text-gray-600">Length:</p>
+                        <p className="font-medium">{productDetails?.length}</p>
+                      </div>
+                      <div className="flex justify-between">
+                        <p className="text-gray-600">MM:</p>
+                        <p className="font-medium">{productDetails?.mm}</p>
+                      </div>
+                      <div className="flex justify-between">
+                        <p className="text-gray-600">Size:</p>
+                        <p className="font-medium">{productDetails?.size}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="w-2/5 pl-4 mt-8 text-right">
+                    <h3 className="font-bold text-sm text-gray-900 mb-2">
+                      COST PRICE:
+                    </h3>
+                    <p className="text-red-600 text-lg font-bold">
+                      ${productDetails?.costPrice}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )} */}
 
       {showPurchaseOrderDetailModal && (
         <>

@@ -104,6 +104,12 @@ const UpdateExpensePage: React.FC = () => {
             </div>
         )
     }
+
+    return (
+        <div className="w-full">
+            <AddExpense initialData={expenseData} isEditing={true} expenseId={id} />
+        </div>
+    )
 }
 
 export default UpdateExpensePage

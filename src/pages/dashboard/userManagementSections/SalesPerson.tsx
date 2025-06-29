@@ -64,12 +64,22 @@ const SalesPerson: React.FC = () => {
         const usersData = response.data.data || [];
 
         // Filter only admin users
-        const adminUsers = usersData.filter(
-          (user: any) => user.role?.name === "Sale Person"
-        );
+        const validSalesRoles = [
+          "sales person",
+          "sales persons",
+          "sale persons",
+          "sale person",
+          "saleperson",
+          "salesperson",
+          "salepersons",
+          "salespersons",
+        ];
 
-        setUsers(adminUsers);
-        console.log("Sales users:", adminUsers);
+        const salesUsers = usersData.filter((user: any) =>
+          validSalesRoles.includes(user.role?.name?.toLowerCase())
+        );
+        setUsers(salesUsers);
+        console.log("Sales users:", salesUsers);
       } else {
         setError("Failed to fetch Sales");
         toast.error("Failed to fetch Sales users");

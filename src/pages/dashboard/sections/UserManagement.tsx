@@ -50,7 +50,7 @@
 
 
 import React, { lazy, Suspense, useState, useEffect } from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { Routes, Route, useNavigate , useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 
 // Lazy loaded components

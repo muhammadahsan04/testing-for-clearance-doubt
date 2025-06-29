@@ -11,6 +11,9 @@ import Dropdown from "./Dropdown";
 import Button from "./Button";
 import { useNavigate } from "react-router-dom";
 import { DropImage } from "./UploadPicture";
+import PhoneInput from "react-phone-number-input";
+import { isValidPhoneNumber } from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 
 // Helper function to check permissions
 const hasPermission = (module: string, action: string) => {
@@ -154,13 +157,15 @@ const UserTable: React.FC<UserTableProps> = ({
   setUploadedFile,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [deleteUser, setDeleteUser] = useState<any>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [phoneError, setPhoneError] = useState<string>("");
+  const [phoneValue, setPhoneValue] = useState<string | undefined>(undefined);
 
   // Edit user states
   const [isEditing, setIsEditing] = useState(false);
@@ -209,6 +214,30 @@ const UserTable: React.FC<UserTableProps> = ({
       setSelectedImagePreview(null);
     }
   }, [uploadedFile]);
+
+  // Handle phone number change
+  const handlePhoneChange = (value: string | undefined) => {
+    setPhoneValue(value);
+    setPhoneError("");
+
+    if (value) {
+      // Validate phone number
+      if (!isValidPhoneNumber(value)) {
+        setPhoneError("Please enter a valid phone number");
+      }
+
+      // Update form data
+      setFormData((prev) => ({
+        ...prev,
+        phone: value,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        phone: "",
+      }));
+    }
+  };
 
   const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
 
@@ -263,19 +292,19 @@ const UserTable: React.FC<UserTableProps> = ({
 
         // Set form data with user details
         setFormData({
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          email: userData.email,
-          phone: userData.phone,
+          firstName: userData?.firstName,
+          lastName: userData?.lastName,
+          email: userData?.email,
+          phone: userData?.phone,
           password: "",
           confirmPassword: "",
-          role: userData.role._id,
-          status: userData.status,
-          _id: userData._id,
+          role: userData?.role?._id,
+          status: userData?.status,
+          _id: userData?._id,
         });
 
         // Set selected role name for dropdown
-        setSelectedRoleName(userData.role.name);
+        setSelectedRoleName(userData?.role?.name);
 
         // Set image preview if available
         if (userData.profileImage) {
@@ -369,7 +398,7 @@ const UserTable: React.FC<UserTableProps> = ({
     }
     return true;
   };
-  console.log("selectedUser", selectedUser);
+  // console.log("selectedUser", selectedUser);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -964,12 +993,15 @@ const UserTable: React.FC<UserTableProps> = ({
                   {selectedUser.role}
                 </span>
               </div>
-              <h3 className="text-xl font-bold mt-1">
+              {/* <h3 className="text-xl font-bold mt-1">
                 {selectedUser.name} ({selectedUser.id})
+              </h3> */}
+              <h3 className="text-xl font-bold mt-1">
+                {selectedUser.name}
               </h3>
-              <div className="mt-2 text-black text-sm font-bold">
+              {/* <div className="mt-2 text-black text-sm font-bold">
                 290/UKM_IK/XXVII/2025
-              </div>
+              </div> */}
               <div className="flex justify-center gap-6 text-[#71717A] mt-2">
                 <p>{selectedUser.email}</p>
                 <p>{selectedUser.phone} </p>
@@ -1024,7 +1056,7 @@ const UserTable: React.FC<UserTableProps> = ({
             </div>
 
             {fetchingUserDetails ? (
-              <div className="flex justify-center items-center h-64">
+              <div className="flex justify-center items-center h-full">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
               </div>
             ) : (
@@ -1096,11 +1128,19 @@ const UserTable: React.FC<UserTableProps> = ({
                       <label htmlFor="role" className="mb-1">
                         Role <span className="text-red-500">*</span>
                       </label>
-                      <Dropdown
+                      {/* <Dropdown
                         options={roles.map((role) => role.name)}
                         className="w-full"
                         onSelect={handleRoleSelect}
                         defaultValue={selectedRoleName || "Select Role"}
+                      /> */}
+                      <Dropdown
+                        options={roles.map((role) => role.name)}
+                        className="w-full"
+                        onSelect={handleRoleSelect}
+                        noResultsMessage="No roles found"
+                        defaultValue={selectedRoleName || "Select Role"}
+                        searchable={true} // Add this prop
                       />
                     </div>
 
@@ -1118,7 +1158,7 @@ const UserTable: React.FC<UserTableProps> = ({
                       />
                     </div>
 
-                    <div>
+                    {/* <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Phone No <span className="text-red-500">*</span>
                       </label>
@@ -1129,6 +1169,36 @@ const UserTable: React.FC<UserTableProps> = ({
                         onChange={handleInputChange}
                         className="w-full"
                       />
+                    </div> */}
+
+                    {/* Phone Number Input with react-phone-number-input */}
+                    <div className="flex flex-col text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Phone No <span className="text-red-500">*</span>
+                      </label>
+                      <PhoneInput
+                        placeholder="Enter phone number"
+                        value={formData.phone}
+                        onChange={handlePhoneChange}
+                        defaultCountry="GB"
+                        international
+                        countryCallingCodeEditable={false}
+                        className={`phone-input-container ${
+                          phoneError ? "border-red-500" : ""
+                        }`}
+                        style={{
+                          "--PhoneInputCountryFlag-height": "1em",
+                          "--PhoneInputCountrySelectArrow-color": "#6b7280",
+                        }}
+                      />
+                      {phoneError && (
+                        <span className="text-red-500 text-xs mt-1">
+                          {phoneError}
+                        </span>
+                      )}
+                      <span className="text-gray-500 text-xs mt-1">
+                        Phone number with country code (UK selected by default)
+                      </span>
                     </div>
 
                     <div>
@@ -1354,6 +1424,65 @@ const UserTable: React.FC<UserTableProps> = ({
           </div>
         </div>
       )}
+
+      <style>{`
+  .PhoneInput {
+    display: flex;
+    align-items: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    background-color: white;
+    font-size: 0.875rem;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  
+  .PhoneInput:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  }
+  
+  .PhoneInputCountrySelect {
+    margin-right: 1rem;
+    border: none;
+    background: transparent;
+    font-size: 0.875rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    transition: background-color 0.2s ease-in-out;
+  }
+  
+  .PhoneInputCountrySelect:hover {
+    background-color: #f9fafb;
+  }
+  
+  .PhoneInputCountrySelect:focus {
+    outline: none;
+    background-color: #f3f4f6;
+  }
+  
+  .PhoneInputInput {
+    border: none;
+    outline: none;
+    flex: 1;
+    font-size: 0.875rem;
+    background: transparent;
+    color: #374151;
+    font-weight: 400;
+  }
+  
+  .PhoneInputInput::placeholder {
+    color: #9ca3af;
+    font-weight: 400;
+  }
+  
+  .phone-input-container.border-red-500 .PhoneInput {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  }
+`}</style>
     </>
   );
 };

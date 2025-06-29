@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from "react";
-import Input from "../../../components/Input";
-import Button from "../../../components/Button";
+import React, { useEffect, useState } from "react";
+import { StatCard } from "./OverAll";
 import { useNavigate } from "react-router-dom";
-import { DatePicker } from "antd";
+import GenericTable from "../../../components/UserTable";
 import axios from "axios";
 import { toast } from "react-toastify";
-import moment from "moment";
 
-// Helper function to get auth token
-const getAuthToken = () => {
+interface Column {
+  header: string;
+  accessor: string;
+  type?: "text" | "image" | "status" | "actions";
+}
+
+// Helper function to get user role
+const getUserToken = () => {
   let token = localStorage.getItem("token");
   if (!token) {
     token = sessionStorage.getItem("token");
@@ -16,80 +20,42 @@ const getAuthToken = () => {
   return token;
 };
 
-const CurrentPricing: React.FC = () => {
+const DeliveryPerson: React.FC = () => {
+  // Add these state variables
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const columns: Column[] = [
+    { header: "User ID", accessor: "id" },
+    { header: "Name", accessor: "name", type: "image" },
+    { header: "Role", accessor: "role" },
+    { header: "Status", accessor: "status", type: "status" },
+    { header: "Last Login", accessor: "date" },
+    { header: "Actions", accessor: "actions", type: "actions" },
+  ];
+
   const navigate = useNavigate();
-  const { RangePicker } = DatePicker;
 
-  // State for Gold pricing
-  const [goldPrice, setGoldPrice] = useState<string>("");
-  const [goldDateRange, setGoldDateRange] = useState<any>(null);
-  const [isSubmittingGold, setIsSubmittingGold] = useState<boolean>(false);
-
-  // State for Diamond pricing
-  const [diamondPrice, setDiamondPrice] = useState<string>("");
-  const [diamondDateRange, setDiamondDateRange] = useState<any>(null);
-  const [isSubmittingDiamond, setIsSubmittingDiamond] =
-    useState<boolean>(false);
-
-  // Handle Gold price submission
-  const handleGoldSubmit = async () => {
-    if (!goldPrice) {
-      toast.error("Please enter a gold price");
-      return;
-    }
-
-    if (!goldDateRange || !goldDateRange[0] || !goldDateRange[1]) {
-      toast.error("Please select a date range for gold pricing");
-      return;
-    }
-
-    // Extract the dates properly from dayjs objects
-    const startDate = goldDateRange[0].$d; // Get the native Date object
-    const endDate = goldDateRange[1].$d; // Get the native Date object
-
-    // Format dates as strings in YYYY-MM-DD format for API
-    const formattedStartDate =
-      startDate.getFullYear() +
-      "-" +
-      String(startDate.getMonth() + 1).padStart(2, "0") +
-      "-" +
-      String(startDate.getDate()).padStart(2, "0");
-
-    const formattedEndDate =
-      endDate.getFullYear() +
-      "-" +
-      String(endDate.getMonth() + 1).padStart(2, "0") +
-      "-" +
-      String(endDate.getDate()).padStart(2, "0");
-
-    // Check if start date is before end date
-    if (formattedStartDate >= formattedEndDate) {
-      toast.error("End date must be after the start date");
-      return;
-    }
-
-    setIsSubmittingGold(true);
-
+  // Add this function to fetch admin users
+  const fetchDilveryUsers = async () => {
     try {
-      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
-      const token = getAuthToken();
+      setLoading(true);
+      const API_URL =
+        import.meta.env.VITE_BASE_URL || "http://192.168.100.18:9000";
+      const token = getUserToken();
 
       if (!token) {
         toast.error("Authentication token not found. Please login again.");
         return;
       }
 
-      const payload = {
-        name: `$${goldPrice}`,
-        startDate: formattedStartDate,
-        endDate: formattedEndDate,
-      };
-
-      console.log("Gold pricing payload:", payload); // Log the payload for debugging
-
-      const response = await axios.post(
-        `${API_URL}/api/abid-jewelry-ms/addGoldPricing`,
-        payload,
+      const response = await axios.get(
+        `${API_URL}/api/abid-jewelry-ms/getAllUsers`,
         {
           headers: {
             "x-access-token": token,
@@ -99,224 +65,109 @@ const CurrentPricing: React.FC = () => {
       );
 
       if (response.data.success) {
-        toast.success("Gold pricing added successfully!");
-        // Reset form
-        setGoldPrice("");
-        setGoldDateRange(null);
-      } else {
-        toast.error(response.data.message || "Failed to add gold pricing");
-      }
-    } catch (error) {
-      console.error("Error adding gold pricing:", error);
-      if (axios.isAxiosError(error)) {
-        if (!error.response) {
-          toast.error("Network error. Please check your internet connection.");
-        } else {
-          toast.error(
-            error.response.data.message || "Failed to add gold pricing"
-          );
-        }
-      } else {
-        toast.error("An unexpected error occurred while adding gold pricing");
-      }
-    } finally {
-      setIsSubmittingGold(false);
-    }
-  };
+        const usersData = response.data.data || [];
 
-  // Handle Diamond price submission
-  const handleDiamondSubmit = async () => {
-    if (!diamondPrice) {
-      toast.error("Please enter a diamond price");
-      return;
-    }
+        // Filter only admin users
+       const validDeliveryRoles = [
+          "delivery person",
+          "delivery persons",
+          "deliverypersons",
+          "Delivery Person",
+          "Delivery Persons",
+          "Delivery persons",
+        ];
 
-    if (!diamondDateRange || !diamondDateRange[0] || !diamondDateRange[1]) {
-      toast.error("Please select a date range for diamond pricing");
-      return;
-    }
-
-    // Extract the dates properly from dayjs objects
-    const startDate = diamondDateRange[0].$d; // Get the native Date object
-    const endDate = diamondDateRange[1].$d; // Get the native Date object
-
-    // Format dates as strings in YYYY-MM-DD format for API
-    const formattedStartDate =
-      startDate.getFullYear() +
-      "-" +
-      String(startDate.getMonth() + 1).padStart(2, "0") +
-      "-" +
-      String(startDate.getDate()).padStart(2, "0");
-
-    const formattedEndDate =
-      endDate.getFullYear() +
-      "-" +
-      String(endDate.getMonth() + 1).padStart(2, "0") +
-      "-" +
-      String(endDate.getDate()).padStart(2, "0");
-
-    // Check if start date is before end date
-    if (formattedStartDate >= formattedEndDate) {
-      toast.error("End date must be after the start date");
-      return;
-    }
-
-    setIsSubmittingDiamond(true);
-
-    try {
-      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
-      const token = getAuthToken();
-
-      if (!token) {
-        toast.error("Authentication token not found. Please login again.");
-        return;
-      }
-
-      const payload = {
-        name: `$${diamondPrice}`,
-        startDate: formattedStartDate,
-        endDate: formattedEndDate,
-      };
-
-      console.log("Diamond pricing payload:", payload); // Log the payload for debugging
-
-      const response = await axios.post(
-        `${API_URL}/api/abid-jewelry-ms/addDiamondPricing`,
-        payload,
-        {
-          headers: {
-            "x-access-token": token,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (response.data.success) {
-        toast.success("Diamond pricing added successfully!");
-        // Reset form
-        setDiamondPrice("");
-        setDiamondDateRange(null);
-      } else {
-        toast.error(response.data.message || "Failed to add diamond pricing");
-      }
-    } catch (error) {
-      console.error("Error adding diamond pricing:", error);
-      if (axios.isAxiosError(error)) {
-        if (!error.response) {
-          toast.error("Network error. Please check your internet connection.");
-        } else {
-          toast.error(
-            error.response.data.message || "Failed to add diamond pricing"
-          );
-        }
-      } else {
-        toast.error(
-          "An unexpected error occurred while adding diamond pricing"
+        const deliveryUsers = usersData.filter((user: any) =>
+          validDeliveryRoles.includes(user.role?.name?.toLowerCase())
         );
+
+        setUsers(deliveryUsers);
+        console.log("delivery users:", deliveryUsers);
+      } else {
+        setError("Failed to fetch delivery");
+        toast.error("Failed to fetch delivery users");
       }
+    } catch (err) {
+      setError("Error fetching delivery data");
+      console.error("Error fetching delivery users:", err);
+      toast.error("An error occurred while fetching delivery users");
     } finally {
-      setIsSubmittingDiamond(false);
+      setLoading(false);
     }
   };
+
+  // Add useEffect to fetch data
+  useEffect(() => {
+    fetchDilveryUsers();
+  }, []);
+  // Transform the real data instead of using static adminData
+  const formattedDeliveryUsers = users.map((user, index) => ({
+    id: user._id,
+    userId: user.userId,
+    name: `${user.firstName} ${user.lastName}`,
+    userImage: user.profileImage,
+    role: user.role?.name || "No Role",
+    status: user.status === "active" ? "Active" : "Inactive",
+    date: new Date(user.createdAt).toLocaleDateString("en-GB") || "N/A",
+  }));
 
   return (
-    <div className="w-full mx-auto px-3 py-6 sm:px-4 md:px-6 xl:px-8 xl:py-6 min-h-screen">
-      <h2 className="Inter-font font-semibold text-[20px] mb-2">
-        Current Pricing
+    <div className="mx-auto px-3 py-6 sm:px-4 md:px-6 xl:px-8 xl:py-6 w-full">
+      <h2 className="Source-Sans-Pro-font font-semibold text-[#5D6679] text-[20px] mb-2">
+        <span
+          onClick={() =>
+            navigate("/dashboard/user-management/overall", { replace: true })
+          }
+          className="cursor-pointer"
+        >
+          User Management
+        </span>{" "}
+        / <span className="text-black">Deliveryperson</span>
       </h2>
-      {/* Gold Row */}
-      <div className="bg-white flex flex-col gap-5 overflow-hidden shadow-md rounded-lg px-5 md:px-10 py-7 md:py-10">
-        <div className="flex flex-col md:flex-row items-center gap-4 mb-6 ">
-          <div className="flex flex-col w-full md:w-[45%]">
-            <label className="font-semibold mb-1">
-              Gold ( $ )
-              <span
-                className="text-[12px] text-[#007AFF] cursor-pointer ml-2 underline"
-                onClick={() => navigate("gold/history")}
-              >
-                View History
-              </span>
-            </label>
-            <Input
-              placeholder="$ 3027.20"
-              className="w-full outline-none "
-              type="number"
-              value={goldPrice}
-              onChange={(e) => setGoldPrice(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-col w-full md:w-[40%]">
-            <label className="font-semibold mb-1">Date Range</label>
-            <RangePicker
-              className="h-10 !text-gray-400 !border-[#D1D5DC]"
-              value={goldDateRange}
-              onChange={(dates) => {
-                console.log("Selected gold dates:", dates); // Log the selected dates
-                setGoldDateRange(dates);
-              }}
-              format="DD-MMM-YYYY" // Format to display as 23-Mar-2025
-              allowClear={true}
-            />
-          </div>
-
-          <div className="mt-2 md:mt-7 w-full md:w-[15%]">
-            <Button
-              text={isSubmittingGold ? "Saving..." : "Save"}
-              className="bg-[#007AFF] text-white w-full border-none"
-              onClick={handleGoldSubmit}
-              disabled={isSubmittingGold}
-            />
-          </div>
-        </div>
-
-        {/* Diamond Row */}
-        <div className="flex flex-col md:flex-row items-center gap-4">
-          <div className="flex flex-col w-full md:w-[45%]">
-            <label className="font-semibold mb-1">
-              Diamond ( $ )
-              <span
-                className="text-[12px] text-[#007AFF] cursor-pointer ml-2 underline"
-                onClick={() => navigate("diamond/history")}
-              >
-                View History
-              </span>
-            </label>
-            <Input
-              placeholder="$ 3027.20"
-              className="w-full outline-none"
-              type="number"
-              value={diamondPrice}
-              onChange={(e) => setDiamondPrice(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-col w-full md:w-[40%]">
-            <label className="font-semibold mb-1">Date Range</label>
-            <RangePicker
-              className="h-10 !text-gray-400 !border-[#D1D5DC]"
-              value={diamondDateRange}
-              onChange={(dates) => {
-                console.log("Selected diamond dates:", dates); // Log the selected dates
-                setDiamondDateRange(dates);
-              }}
-              format="DD-MMM-YYYY" // Format to display as 23-Mar-2025
-              allowClear={true}
-            />
-          </div>
-
-          <div className="mt-2 md:mt-7 w-full md:w-[15%]">
-            <Button
-              text={isSubmittingDiamond ? "Saving..." : "Save"}
-              className="bg-[#007AFF] text-white w-full border-none"
-              onClick={handleDiamondSubmit}
-              disabled={isSubmittingDiamond}
-            />
-          </div>
-        </div>
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-white shadow rounded-xl p-4 mt-2 mb-10">
+        <StatCard
+          label="Total Users"
+          value="2500"
+          textColor="text-orange-400"
+        />
+        <StatCard
+          label="Active Users"
+          value="1800"
+          textColor="text-green-400"
+        />
+        <StatCard
+          label="Inactive Users"
+          value="150"
+          textColor="text-purple-500"
+        />
+        <StatCard label="Admins" value="5" textColor="text-red-400" />
       </div>
+
+      {loading ? (
+        <div className="flex justify-center items-center h-40">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      ) : error ? (
+        <div className="flex justify-center items-center h-40 text-red-500">
+          <p>{error}</p>
+        </div>
+      ) : (
+        <GenericTable
+          columns={columns}
+          data={formattedDeliveryUsers}
+          tableTitle="Delivery Person"
+          onEdit={(row) => setSelectedUser(row)} // ✅ This opens the modal
+          onDelete={(row) => {
+            setSelectedUser(row); // ✅ Use the selected user
+            setShowDeleteModal(true); // ✅ Open the delete modal
+          }}
+          uploadedFile={uploadedFile}
+          setUploadedFile={setUploadedFile}
+        />
+      )}
     </div>
   );
 };
 
-export default CurrentPricing;
+export default DeliveryPerson;

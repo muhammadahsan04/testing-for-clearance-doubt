@@ -22,6 +22,40 @@ interface PurchaseInvoiceDetail {
   date?: string;
 }
 
+type ColumnType =
+  | "select"
+  | "text"
+  | "image"
+  | "status"
+  | "actions"
+  | "button"
+  | "custom"
+  | "refrence";
+
+interface Column {
+  header: string;
+  accessor: string;
+  type?: ColumnType;
+}
+
+interface SupplierLedgerDetailTableProps {
+  columns: Column[];
+  data: any[];
+  tableTitle?: string;
+  tableDataAlignment?: "zone" | "user" | "center";
+  className?: string;
+  onRowClick?: (row: any) => void;
+  enableRowModal?: boolean;
+  eye?: boolean;
+  selectedRows?: { [key: string]: boolean };
+  // onRowSelect?: (rowId: string) => void;
+  onRowSelect?: (rowId: string, allSelectedRows?: any) => void; // Updated signature
+  showTitle?: boolean;
+  marginTop?: string;
+  onEyeClick?: (row: any) => void;
+  disabledRows?: { [key: string]: boolean };
+}
+
 const SupplierLedgerDetailTable: React.FC<SupplierLedgerDetailTableProps> = ({
   eye = true,
   enableRowModal = true,
@@ -36,12 +70,60 @@ const SupplierLedgerDetailTable: React.FC<SupplierLedgerDetailTableProps> = ({
   showTitle = true,
   marginTop = "",
   onEyeClick,
+  disabledRows = {},
 }) => {
   // const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [ledgerInvoice, setLedgerInvoice] = useState<any>(null);
   const [paymentDetail, setPaymentDetail] = useState<any>(null);
   const [selectedPaymentRow, setSelectedPaymentRow] = useState<any>(null);
   const [isOpen, setIsOpen] = useState(false);
+
+  // const handleRowSelect = (rowId: string) => {
+  //   setSelectedPaymentRow((prev: any) => {
+  //     const newSelectedRows = { ...prev };
+  //     newSelectedRows[rowId] = !newSelectedRows[rowId];
+
+  //     // Log the selected row data
+  //     const selectedRow = payData.find((row) => row.invoice === rowId);
+  //     console.log("Selected/Deselected Row:", selectedRow);
+
+  //     // Log all currently selected rows after update
+  //     const allSelectedRowIds = Object.keys(newSelectedRows).filter(
+  //       (id) => newSelectedRows[id]
+  //     );
+  //     const allSelectedRowData = payData.filter((row) =>
+  //       allSelectedRowIds.includes(row.invoice)
+  //     );
+  //     console.log("All Selected Rows:", allSelectedRowData);
+
+  //     return newSelectedRows;
+  //   });
+  // };
+
+  // Replace the existing handleRowSelect function (around line 67)
+  const handleRowSelect = (rowId: string) => {
+    setSelectedPaymentRow((prev: any) => {
+      // For single selection, clear all previous selections and select only the current one
+      const newSelectedRows: any = {};
+
+      // If the clicked row is already selected, deselect it
+      if (prev[rowId]) {
+        // Deselect all
+        onRowSelect && onRowSelect(rowId, {}); // Pass empty object to parent
+        return {};
+      } else {
+        // Select only this row
+        newSelectedRows[rowId] = true;
+
+        // Log the selected row data
+        const selectedRow = data.find((row) => row.invoice === rowId);
+        console.log("Selected Row:", selectedRow);
+
+        onRowSelect && onRowSelect(rowId, newSelectedRows); // Pass to parent
+        return newSelectedRows;
+      }
+    });
+  };
 
   // Sample invoice detail data for expanded rows
   const invoiceDetailData: { [key: string]: PurchaseInvoiceDetail[] } = {
@@ -108,6 +190,39 @@ const SupplierLedgerDetailTable: React.FC<SupplierLedgerDetailTableProps> = ({
     { header: "Balance ($)", accessor: "balance", type: "text" },
   ];
 
+  // All data with month information
+  const payData = [
+    {
+      invoice: "#78965",
+      invoiceDate: "15/2/2025",
+      status: "Partially Paid",
+      debit: "300",
+      balance: "100",
+      credit: "0",
+      refrenceNo: 785643,
+      month: "February",
+    },
+    {
+      invoice: "#45632",
+      invoiceDate: "28/2/2025",
+      status: "Paid",
+      debit: "200",
+      balance: "200",
+      credit: "0",
+      refrenceNo: 678934,
+      month: "February",
+    },
+    {
+      invoice: "#53455",
+      invoiceDate: "06/2/2025",
+      status: "Unpaid",
+      debit: "456",
+      balance: "120",
+      credit: "1",
+      refrenceNo: 678934,
+      month: "February",
+    },
+  ];
 
   const purchaseInvoiceData = [
     {
@@ -133,6 +248,14 @@ const SupplierLedgerDetailTable: React.FC<SupplierLedgerDetailTableProps> = ({
     { header: "RATE ($)", accessor: "rate" },
     { header: "AMOUNT ($)", accessor: "amount" },
   ];
+  // Toggle row expansion
+  // const toggleRowExpansion = (invoiceId: string) => {
+  //   if (expandedRow === invoiceId) {
+  //     setExpandedRow(null);
+  //   } else {
+  //     setExpandedRow(invoiceId);
+  //   }
+  // };
 
   return (
     <>
@@ -184,10 +307,19 @@ const SupplierLedgerDetailTable: React.FC<SupplierLedgerDetailTableProps> = ({
                                 >
                                   <input
                                     type="checkbox"
+                                    // checked={selectedRows[row.invoice] || false}
+                                    // onChange={(e) => {
+                                    //   e.stopPropagation();
+                                    //   onRowSelect(row.invoice);
+                                    // }}
                                     checked={selectedRows[row.invoice] || false}
+                                    disabled={disabledRows[row.invoice]} // Add this line
                                     onChange={(e) => {
                                       e.stopPropagation();
-                                      onRowSelect(row.invoice);
+                                      if (!disabledRows[row.invoice]) {
+                                        // Add this condition
+                                        onRowSelect(row.invoice);
+                                      }
                                     }}
                                     className="form-checkbox h-4 w-4 text-blue-600 cursor-pointer"
                                   />
@@ -212,7 +344,24 @@ const SupplierLedgerDetailTable: React.FC<SupplierLedgerDetailTableProps> = ({
                                   )}
                                 </div>
                               );
-                           
+                            case "refrence":
+                              return (
+                                <div className="flex justify-center gap-2">
+                                  {typeof row.refrence === "number" ? (
+                                    <>
+                                      {row.refrence}
+                                      <RiFileList2Line
+                                        size={20}
+                                        className="cursor-pointer"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setPaymentDetail(row);
+                                        }}
+                                      />
+                                    </>
+                                  ) : (
+                                    <>{row.refrence}</>
+                                  )}
                                 </div>
                               );
                             case "status":
@@ -229,7 +378,24 @@ const SupplierLedgerDetailTable: React.FC<SupplierLedgerDetailTableProps> = ({
                                   {row.status}
                                 </span>
                               );
-                            
+                            case "actions":
+                              return (
+                                <div className="flex justify-center gap-2">
+                                  {eye && (
+                                    <LuEye
+                                      size={20}
+                                      className="cursor-pointer"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (onEyeClick) {
+                                          onEyeClick(row);
+                                        } else {
+                                          setLedgerInvoice(row);
+                                          setIsOpen(true);
+                                        }
+                                      }}
+                                    />
+                                  )}
                                   {/* {expandedRow === row.invoice ? (
                                     <LuChevronUp size={20} />
                                   ) : (
@@ -245,6 +411,61 @@ const SupplierLedgerDetailTable: React.FC<SupplierLedgerDetailTableProps> = ({
                     </td>
                   ))}
                 </tr>
+                {/* Expanded Row Content */}
+                {/* {expandedRow === row.invoice && (
+                  <tr className="Inter-font">
+                    <td
+                      colSpan={columns.length}
+                      className="p-0 border-t border-gray-200"
+                    >
+                      <div className="bg-[#f0f7f3] p-4 transition-all duration-300 ease-in-out">
+                        <table className="w-full text-sm border border-gray-300 rounded-lg overflow-hidden">
+                          <thead className="bg-[#e6f0eb] text-black font-semibold">
+                            <tr>
+                              <th className="px-4 py-2 text-left">Date</th>
+                              <th className="px-4 py-2 text-left">
+                                PR Invoice Number
+                              </th>
+                              <th className="px-4 py-2 text-left">Item Name</th>
+                              <th className="px-4 py-2 text-center">QTY</th>
+                              <th className="px-4 py-2 text-right">
+                                PR Total ($)
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {invoiceDetailData[row.invoice]?.map(
+                              (detail, detailIdx) => (
+                                <tr key={detailIdx} className="bg-white">
+                                  <td className="px-4 py-2 text-left">
+                                    {detail.date}
+                                  </td>
+                                  <td className="px-4 py-2 text-left">
+                                    {detail.prInvoiceNumber}
+                                  </td>
+                                  <td className="px-4 py-2 text-left">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+                                        {detail.itemName?.charAt(0)}
+                                      </div>
+                                      {detail.itemName}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-2 text-center">
+                                    {detail.qty}
+                                  </td>
+                                  <td className="px-4 py-2 text-right">
+                                    {detail.prTotal}
+                                  </td>
+                                </tr>
+                              )
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+                )} */}
               </React.Fragment>
             ))}
             {data.length === 0 && (

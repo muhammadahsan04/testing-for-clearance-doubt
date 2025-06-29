@@ -1432,7 +1432,7 @@ const SupplierTable: React.FC<SupplierTableProps> = ({
   canAdd = true,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedUser, setSelectedUser] = useState<any>(null); // for modal
   const [deleteSupplier, setDeleteSupplier] = useState<any>(null); // for modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -1745,6 +1745,18 @@ const SupplierTable: React.FC<SupplierTableProps> = ({
     setDeleteSupplier(row);
   };
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const nameRegex = /^[a-zA-Z\s]+$/; // Only letters and spaces
+
+  // Add these validation functions
+  const validateEmail = (email: string) => {
+    return emailRegex.test(email);
+  };
+
+  const validateName = (name: string) => {
+    return nameRegex.test(name);
+  };
+
   // Handle form submission for updating supplier
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1787,6 +1799,20 @@ const SupplierTable: React.FC<SupplierTableProps> = ({
       return;
     }
 
+    if (!validateName(formData.companyName)) {
+      toast.error("Company name should only contain letters");
+      return;
+    }
+
+    if (!validateName(formData.representativeName)) {
+      toast.error("Representative name should only contain letters");
+      return;
+    }
+
+    if (!validateEmail(formData.email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -2191,7 +2217,7 @@ const SupplierTable: React.FC<SupplierTableProps> = ({
           </table>
 
           {/* Pagination */}
-            <div
+          <div
             className={`flex flex-col ${
               dealBy ? "md:flex-col gap-3" : "md:flex-row"
             } items-center justify-between px-4 py-4`}
@@ -2416,6 +2442,7 @@ const SupplierTable: React.FC<SupplierTableProps> = ({
                         Phone no
                       </label>
                       <Input
+                        type="number"
                         name="phone"
                         placeholder="+56 362738233"
                         className="outline-none focus:outline-none w-full"
@@ -2470,6 +2497,8 @@ const SupplierTable: React.FC<SupplierTableProps> = ({
                         options={productCategories.map((cat) => cat.name)}
                         defaultValue="Select Product"
                         onSelect={handleProductSelect}
+                        searchable={true}
+                        noResultsMessage="No Product found"
                       />
 
                       {/* Display selected products */}
@@ -2512,6 +2541,8 @@ const SupplierTable: React.FC<SupplierTableProps> = ({
                           selectedPaymentTermName || "Select Payment Term"
                         }
                         onSelect={handlePaymentTermSelect}
+                        searchable={true}
+                        noResultsMessage="No Payment Term found"
                       />
                     </div>
 

@@ -658,6 +658,21 @@ const StoreLedgerDetailTable: React.FC<StoreLedgerDetailTableProps> = ({
     { header: "AMOUNT ($)", accessor: "amount" },
   ];
 
+  // Transform items from originalData for InvoiceDetailModal
+  // const transformItemsForModal = (row: any) => {
+  //   if (row.originalData && row.originalData.items) {
+  //     return row.originalData.items.map((item: any) => ({
+  //       itemdescription: item.item?.barcode || item._id || "N/A",
+  //       qty: item.quantity || 0,
+  //       rate: item.sellPrice || item.costPrice || 0,
+  //       amount: item.totalSell || item.totalCost || 0,
+  //       productName: item.item?.category?.name || "Unknown Product",
+  //       userImage: item.item?.itemImage || null,
+  //     }));
+  //   }
+  //   return [];
+  // };
+
   const transformItemsForModal = (row: any) => {
     if (row.originalData && row.originalData.items) {
       return row.originalData.items.map((item: any) => ({
@@ -706,7 +721,114 @@ const StoreLedgerDetailTable: React.FC<StoreLedgerDetailTableProps> = ({
             </tr>
           </thead>
           <tbody className="border-gray-400">
-          
+            {data.map((row, idx) => (
+              <React.Fragment key={idx}>
+                <tr className="hover:bg-gray-50 whitespace-nowrap cursor-pointer">
+                  {columns.map((col, index) => (
+                    <td
+                      key={col.accessor}
+                      className="px-6 py-2"
+                      style={{ width: "max-content" }}
+                    >
+                      <div className="flex flex-row items-center justify-center">
+                        {(() => {
+                          switch (col.type) {
+                            case "select":
+                              return (
+                                <div
+                                  className="flex gap-2 items-center"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedRows[row.invoice] || false}
+                                    onChange={(e) => {
+                                      e.stopPropagation();
+                                      onRowSelect(row.invoice);
+                                    }}
+                                    className="form-checkbox h-4 w-4 text-blue-600 cursor-pointer"
+                                  />
+                                </div>
+                              );
+                            case "image":
+                              return (
+                                <div className="flex gap-2 items-center">
+                                  {row.userImage ? (
+                                    <>
+                                      <img
+                                        src={
+                                          row.userImage || "/placeholder.svg"
+                                        }
+                                        alt="User"
+                                        className="w-8 h-8 rounded-full"
+                                      />
+                                      {row.productName}
+                                    </>
+                                  ) : (
+                                    <>{row.productName}</>
+                                  )}
+                                </div>
+                              );
+                            case "refrence":
+                              return (
+                                <div className="flex justify-center gap-2">
+                                  {typeof row.refrence === "number" ? (
+                                    <>
+                                      {row.refrence}
+                                      <RiFileList2Line
+                                        size={20}
+                                        className="cursor-pointer"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setPaymentDetail(row);
+                                        }}
+                                      />
+                                    </>
+                                  ) : (
+                                    <>{row.refrence}</>
+                                  )}
+                                </div>
+                              );
+                            case "status":
+                              return (
+                                <span
+                                  className={`inline-block px-2 py-1 text-xs rounded-full font-semibold ${
+                                    row.status === "Unpaid"
+                                      ? "text-black"
+                                      : row.status === "Paid"
+                                      ? "text-green-700"
+                                      : "text-orange-400"
+                                  }`}
+                                >
+                                  {row.status}
+                                </span>
+                              );
+                            case "actions":
+                              return (
+                                <div className="flex justify-center gap-2">
+                                  {eye && (
+                                    <LuEye
+                                      size={20}
+                                      className="cursor-pointer"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setLedgerInvoice(row);
+                                        setIsOpen(true);
+                                      }}
+                                    />
+                                  )}
+                                </div>
+                              );
+                            default:
+                              return <>{row[col.accessor]}</>;
+                          }
+                        })()}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+              </React.Fragment>
+            ))}
             {data.length === 0 && (
               <tr>
                 <td

@@ -5,6 +5,7 @@ import Dropdown from "../../../components/Dropdown";
 import StoreLedgerTable from "../../../components/StoreLedgerTable";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 // Add API base URL - adjust this according to your environment
 const API_URL = import.meta.env.VITE_BASE_URL || "http://192.168.100.18:9000";
@@ -73,10 +74,7 @@ const StoreLedger = () => {
               ? new Date(item.invoices[0].dateIssued).toLocaleDateString()
               : new Date().toLocaleDateString(),
             store: item.store?.storeName || "Unknown Store",
-            storeId:
-              item.store?._id ||
-              item.store?.uniqueStoreId ||
-              `store_${index + 1}`,
+            storeId: item.store?._id,
             debit: item.totals?.debit || 0,
             credit: item.totals?.credit || 0,
             balance: (item.totals?.credit || 0) - (item.totals?.debit || 0), // Calculate balance
@@ -140,8 +138,15 @@ const StoreLedger = () => {
     { header: "Actions", accessor: "actions" },
   ];
 
-  // Updated to use storeId instead of store name
   const handleStoreClick = (store: any) => {
+    // Check if storeId exists before navigation
+    if (!store.storeId) {
+      toast.error(
+        `Store ID is missing for store: ${store.store || "Unknown Store"}`
+      );
+      return;
+    }
+
     // Using storeId in URL parameters instead of name
     navigate(`/dashboard/ledger/store-ledger/${store.storeId}`);
   };

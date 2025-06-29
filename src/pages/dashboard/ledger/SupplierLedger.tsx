@@ -53,9 +53,66 @@ const SupplierLedger = () => {
     return token;
   };
 
+  const fetchSupplierData = async () => {
+    try {
+      setLoading(true);
+      const API_URL =
+        import.meta.env.VITE_BASE_URL || "http://192.168.100.18:9000";
+      const token = getAuthToken();
+
+      if (!token) {
+        setError("No authentication token found");
+        return;
+      }
+
+      const response = await axios.post(
+        `${API_URL}/api/abid-jewelry-ms/getTotalInvoiceOfSupplier`,
+        {},
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setSupplierData(response.data.data);
+        setError(null);
+      } else {
+        setError("Failed to fetch supplier data");
+      }
+    } catch (error) {
+      console.error("Error fetching supplier data:", error);
+      setError("Error fetching supplier data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchSupplierData();
   }, []);
+
+  const transformedData = supplierData.map((item, index) => ({
+    sno: index + 1,
+    date: new Date(
+      item.invoices[0]?.createdAt || new Date()
+    ).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }),
+    supplier: item.supplier.companyName,
+    bank: "--",
+    credit: item.totals.credit,
+    debit: item.totals.debit,
+    balance: item.totals.balance,
+    supplierId: item.supplier._id,
+    supplierDetails: item.supplier,
+    totalPaid: item.totals.totalPaid,
+    invoiceCount: item.invoices.length,
+  }));
 
   const columns = [
     { header: "S No", accessor: "sno" },
@@ -80,6 +137,31 @@ const SupplierLedger = () => {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="mx-auto px-3 py-6 sm:px-4 md:px-6 xl:px-6 xl:py-6 w-full">
+        <div className="rounded-xl px-4 py-7 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mx-auto px-3 py-6 sm:px-4 md:px-6 xl:px-6 xl:py-6 w-full">
+        <div className="bg-white rounded-xl px-4 py-7 flex items-center justify-center shadow-md">
+          <div className="text-lg text-red-600">Error: {error}</div>
+          <button
+            onClick={fetchSupplierData}
+            className="ml-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto px-3 py-6 sm:px-4 md:px-6 xl:px-6 xl:py-6 w-full">
@@ -88,6 +170,10 @@ const SupplierLedger = () => {
         data={transformedData}
         tableTitle="Supplier Ledger"
         onEdit={(row) => setSelectedUser(row)}
+        onDelete={(row) => {
+          setSelectedUser(row);
+          setShowDeleteModal(true);
+        }}
         onRowClick={handleSupplierClick}
       />
     </div>

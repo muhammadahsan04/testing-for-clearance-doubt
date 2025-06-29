@@ -184,6 +184,280 @@ const Payment = () => {
     fetchPayments();
   }, []);
 
+  const handleBankDescriptionChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
+    if (e.target.value.length <= charLimit) {
+      setBankDescription(e.target.value);
+    }
+  };
+
+  const handlePaymentDescriptionChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
+    if (e.target.value.length <= charLimit) {
+      setPaymentDescription(e.target.value);
+    }
+  };
+
+  // Handle bank creation
+  const handleBankSubmit = async () => {
+    if (!canCreate) {
+      toast.error("You don't have permission to add sku prefix");
+      return;
+    }
+
+    if (!bankName.trim()) {
+      toast.error("Bank name is required");
+      return;
+    }
+    setIsSubmittingBank(true);
+    try {
+      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+      const payload = {
+        name: bankName,
+        description: bankDescription,
+        status: "active",
+      };
+      const response = await axios.post(
+        `${API_URL}/api/abid-jewelry-ms/createBank`,
+        payload,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (response.data.success) {
+        toast.success("Bank added successfully!");
+        // Add the new bank to the list without refreshing
+        const newBank = {
+          id: banksData.length + 1,
+          _id: response.data.data._id,
+          name: response.data.data.name,
+          description: response.data.data.description,
+          status:
+            response.data.data.status.charAt(0).toUpperCase() +
+            response.data.data.status.slice(1),
+        };
+        setBanksData([...banksData, newBank]);
+        // Reset form
+        setBankName("");
+        setBankDescription("");
+      } else {
+        toast.error(response.data.message || "Failed to add bank");
+      }
+    } catch (error) {
+      console.error("Error adding bank:", error);
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(error.response.data.message || "Failed to add bank");
+        }
+      } else {
+        toast.error("An unexpected error occurred while adding bank");
+      }
+    } finally {
+      setIsSubmittingBank(false);
+    }
+  };
+
+  // Handle payment creation
+  const handlePaymentSubmit = async () => {
+    if (!paymentName.trim()) {
+      toast.error("Payment name is required");
+      return;
+    }
+    setIsSubmittingPayment(true);
+    try {
+      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+      const payload = {
+        name: paymentName,
+        description: paymentDescription,
+        status: "active",
+      };
+      const response = await axios.post(
+        `${API_URL}/api/abid-jewelry-ms/createPayment`,
+        payload,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (response.data.success) {
+        toast.success("Payment mode added successfully!");
+        // Add the new payment to the list without refreshing
+        const newPayment = {
+          id: paymentsData.length + 1,
+          _id: response.data.data._id,
+          name: response.data.data.name,
+          description: response.data.data.description,
+          status:
+            response.data.data.status.charAt(0).toUpperCase() +
+            response.data.data.status.slice(1),
+        };
+        setPaymentsData([...paymentsData, newPayment]);
+        // Reset form
+        setPaymentName("");
+        setPaymentDescription("");
+      } else {
+        toast.error(response.data.message || "Failed to add payment mode");
+      }
+    } catch (error) {
+      console.error("Error adding payment mode:", error);
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(
+            error.response.data.message || "Failed to add payment mode"
+          );
+        }
+      } else {
+        toast.error("An unexpected error occurred while adding payment mode");
+      }
+    } finally {
+      setIsSubmittingPayment(false);
+    }
+  };
+
+  // Handle bank edit
+  const handleEditBank = (bank: any) => {
+    // Update the bank in the list without refreshing
+    const updatedBanks = banksData.map((item) => {
+      if (item._id === bank._id) {
+        return {
+          ...item,
+          name: bank.name,
+          description: bank.description,
+          status: bank.status,
+        };
+      }
+      return item;
+    });
+    setBanksData(updatedBanks);
+  };
+
+  // Handle payment edit
+  const handleEditPayment = (payment: any) => {
+    // Update the payment in the list without refreshing
+    const updatedPayments = paymentsData.map((item) => {
+      if (item._id === payment._id) {
+        return {
+          ...item,
+          name: payment.name,
+          description: payment.description,
+          status: payment.status,
+        };
+      }
+      return item;
+    });
+    setPaymentsData(updatedPayments);
+  };
+
+  // Handle bank delete
+  const handleDeleteBank = async (bank: any) => {
+    try {
+      if (!canDelete) {
+        toast.error("You don't have permission to delete bank mode");
+        return;
+      }
+
+      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+      const response = await axios.delete(
+        `${API_URL}/api/abid-jewelry-ms/deleteBank/${bank._id}`,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (response.data.success) {
+        toast.success("Bank deleted successfully!");
+        // Remove the bank from the list without refreshing
+        const updatedBanks = banksData.filter((item) => item._id !== bank._id);
+        setBanksData(updatedBanks);
+      } else {
+        toast.error(response.data.message || "Failed to delete bank");
+      }
+    } catch (error) {
+      console.error("Error deleting bank:", error);
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(error.response.data.message || "Failed to delete bank");
+        }
+      } else {
+        toast.error("An unexpected error occurred while deleting bank");
+      }
+    }
+  };
+
+  // Handle payment delete
+  const handleDeletePayment = async (payment: any) => {
+    try {
+      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+      const response = await axios.delete(
+        `${API_URL}/api/abid-jewelry-ms/deletePayment/${payment._id}`,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (response.data.success) {
+        toast.success("Payment mode deleted successfully!");
+        // Remove the payment from the list without refreshing
+        const updatedPayments = paymentsData.filter(
+          (item) => item._id !== payment._id
+        );
+        setPaymentsData(updatedPayments);
+      } else {
+        toast.error(response.data.message || "Failed to delete payment mode");
+      }
+    } catch (error) {
+      console.error("Error deleting payment mode:", error);
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(
+            error.response.data.message || "Failed to delete payment mode"
+          );
+        }
+      } else {
+        toast.error("An unexpected error occurred while deleting payment mode");
+      }
+    }
+  };
+
   return (
     <div className="mx-auto px-3 py-6 sm:px-4 md:px-6 xl:px-8 xl:py-6 grid grid-cols-1 md:grid-cols-[230px_1fr] gap-4 min-h-screen">
       {/* Left Sidebar */}
@@ -239,10 +513,12 @@ const Payment = () => {
               </h3>
               <div className="grid grid-cols-1 items-end gap-4 Poppins-font font-medium">
                 <div className="flex flex-col text-[15px]">
-                  <label className="mb-1">Bank Method</label>
+                  <label className="mb-1">
+                    Bank Payment Method <span className="text-red-500"> *</span>
+                  </label>
                   <Input
                     value={bankName}
-                    onChange={(e: { target: { value: any; }; }) => setBankName(e.target.value)}
+                    onChange={(e) => setBankName(e.target.value)}
                     placeholder="Add Bank field"
                     className="outline-none focus:outline-none w-full"
                   />
@@ -264,11 +540,20 @@ const Payment = () => {
                 </div>
                 <div className="flex justify-end">
                   {canCreate && (
+                    // <Button
+                    //   text={isSubmittingBank ? "Saving..." : "Save"}
+                    //   onClick={handleBankSubmit}
+                    //   disabled={isSubmittingBank}
+                    //   className="px-6 !bg-[#056BB7] border-none text-white !py-2"
+                    // />
                     <Button
                       text={isSubmittingBank ? "Saving..." : "Save"}
                       onClick={handleBankSubmit}
+                      className={`px-6 !bg-[#056BB7] border-none text-white ${
+                        isSubmittingBank ? "opacity-70 cursor-not-allowed" : ""
+                      }`}
+                      type="submit"
                       disabled={isSubmittingBank}
-                      className="px-6 !bg-[#056BB7] border-none text-white !py-2"
                     />
                   )}
                 </div>
@@ -282,7 +567,9 @@ const Payment = () => {
               </h3>
               <div className="grid grid-cols-1 items-end gap-4 Poppins-font font-medium">
                 <div className="flex flex-col text-[15px]">
-                  <label className="mb-1">Payment Method</label>
+                  <label className="mb-1">
+                    Payment Method <span className="text-red-500"> *</span>
+                  </label>
                   <Input
                     value={paymentName}
                     onChange={(e) => setPaymentName(e.target.value)}
@@ -307,11 +594,22 @@ const Payment = () => {
                 </div>
                 <div className="flex justify-end">
                   {canCreate && (
+                    // <Button
+                    //   text={isSubmittingPayment ? "Saving..." : "Save"}
+                    //   onClick={handlePaymentSubmit}
+                    //   disabled={isSubmittingPayment}
+                    //   className="px-6 !bg-[#056BB7] border-none text-white !py-2"
+                    // />
                     <Button
                       text={isSubmittingPayment ? "Saving..." : "Save"}
+                      className={`px-6 !bg-[#056BB7] border-none text-white ${
+                        isSubmittingPayment
+                          ? "opacity-70 cursor-not-allowed"
+                          : ""
+                      }`}
                       onClick={handlePaymentSubmit}
+                      type="submit"
                       disabled={isSubmittingPayment}
-                      className="px-6 !bg-[#056BB7] border-none text-white !py-2"
                     />
                   )}
                 </div>

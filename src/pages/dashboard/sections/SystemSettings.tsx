@@ -7,6 +7,7 @@ const SystemSettingRenderPage = lazy(
 );
 
 const SystemSetting: React.FC = () => {
+  
   return (
     <div className="">
       <Suspense fallback={<div className="py-6 px-8">Loading...</div>}>

@@ -1,440 +1,391 @@
-import type React from "react";
-import { useState } from "react";
-import { GoChevronLeft, GoChevronRight } from "react-icons/go";
-import { LuEye } from "react-icons/lu";
-import { IoMdClose } from "react-icons/io";
-import Button from "../components/Button";
-import { toast } from "react-toastify";
-import axios from "axios";
+// import Input from "../../../components/Input";
+// import Button from "../../../components/Button";
+// import React from "react";
+// import { IoIosSearch } from "react-icons/io";
+// import chain from "../../../assets/tops.png";
+// import braclet from "../../../assets/bracelet.png";
+// import noseRing from "../../../assets/noseRing.png";
+// import earing from "../../../assets/earing.png";
+// import ring from "../../../assets/ring.png";
+// import locket from "../../../assets/locket.png";
+// import LiveInventoryTable from "../../../components/LiveInventoryTable";
 
-type ColumnType = "text" | "image" | "status" | "actions" | "button" | "custom";
+// interface Column {
+//   header: string;
+//   accessor: string;
+//   type?: "text" | "image" | "status" | "actions";
+// }
+// const LiveInventory: React.FC = () => {
+//   const columns: Column[] = [
+//     { header: "S.No", accessor: "sno" },
+//     { header: "Image", accessor: "image", type: "image" },
+//     { header: "Barcode", accessor: "barcode" },
+//     { header: "Product For", accessor: "productFor" },
+//     { header: "Category", accessor: "category" },
+//     { header: "Sub Category", accessor: "subCategory" },
+//     { header: "Stock", accessor: "stock" },
+//     { header: "Location", accessor: "location" },
+//     { header: "Actions", accessor: "actions", type: "actions" },
+//   ];
+
+//   const userData = [
+//     {
+//       sno: "01",
+//       //   name: "Matthew Wilson",
+//       userImage: chain,
+//       barcode: "67643875",
+//       productFor: "Male",
+//       category: "Necklace",
+//       subCategory: "Eternal Glow",
+//       stock: "05",
+//       location: "Store",
+//     },
+//     {
+//       sno: "01",
+//       //   name: "Emily Thompson",
+//       userImage: braclet,
+//       barcode: "67643875",
+//       productFor: "Female",
+//       category: "Ring",
+//       subCategory: "Aurora Spark",
+//       stock: "100",
+//       location: "Head Office",
+//     },
+//     {
+//       sno: "01",
+//       //   name: "Nicholas Young",
+//       userImage: noseRing,
+//       barcode: "67643875",
+//       productFor: "Unisex",
+//       category: "Bracelet",
+//       subCategory: "Caleste Curve",
+//       stock: "49",
+//       location: "Store",
+//     },
+//     {
+//       sno: "01",
+//       //   name: "Sarah Martinez",
+//       userImage: earing,
+//       barcode: "67643875",
+//       productFor: "Kids",
+//       category: "Earings",
+//       subCategory: "Velvet Halo",
+//       stock: "53",
+//       location: "Head Office",
+//     },
+//     {
+//       sno: "01",
+//       //   name: "Olivia Bennett",
+//       userImage: ring,
+//       barcode: "67643875",
+//       productFor: "Male",
+//       category: "Pendant",
+//       subCategory: "Twilight Bloom",
+//       stock: "64",
+//       location: "Store",
+//     },
+//     {
+//       sno: "01",
+//       //   name: "Jason Brown",
+//       userImage: locket,
+//       barcode: "67643875",
+//       productFor: "Unisexs",
+//       category: "Bangle",
+//       subCategory: "Ivy twist",
+//       stock: "53",
+//       location: "Store",
+//     },
+//   ];
+//   return (
+//     <div className="w-full mx-auto px-3 py-6 sm:px-4 md:px-6 xl:px-8 xl:py-6 h-auto">
+//       <div className="bg-white rounded-lg shadow-md px-4 md:px-10 py-6 !h-auto">
+//         <p className="Source-Sans-Pro-font font-semibold text-[24px] mb-2">
+//           Live Inventory:
+//         </p>
+
+//         <Input
+//           placeholder="Search Product Tag"
+//           icon={<IoIosSearch className="text-gray-500" />}
+//           iconPosition="left"
+//           className="!rounded-3xl outline-none md:w-[300px]"
+//         />
+//         <LiveInventoryTable
+//           columns={columns}
+//           data={userData}
+//           eye={true}
+//           tableDataAlignment="zone"
+//         />
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default LiveInventory;
+
+
+
+"use client"
+
+import type React from "react"
+import { useState, useEffect } from "react"
+import { IoIosSearch, IoMdClose } from "react-icons/io"
+import LiveInventoryTable from "../../../components/LiveInventoryTable"
+import { toast } from "react-toastify"
+import axios from "axios"
 
 interface Column {
-  header: string;
-  accessor: string;
-  type?: ColumnType;
+  header: string
+  accessor: string
+  type?: "text" | "image" | "status" | "actions"
 }
 
-interface LiveInventoryTableProps {
-  columns: Column[];
-  data: any[];
-  tableTitle?: string;
-  rowsPerPageOptions?: number[];
-  defaultRowsPerPage?: number;
-  searchable?: boolean;
-  filterByStatus?: boolean;
-  onEdit?: (row: any) => void;
-  onDelete?: (row: any) => void;
-  onDeleteConfirm?: (id: string) => void;
-  tableDataAlignment?: "zone" | "user" | "center";
-  className?: string;
-  onRowClick?: (row: any) => void;
-  dealBy?: boolean;
-  enableRowModal?: boolean;
-  eye?: boolean;
-  loading?: boolean;
+interface InventoryItem {
+  _id: string
+  itemId: {
+    _id: string
+    prefixId: {
+      prefixName: string
+    }
+    autoGenerated: string
+    barcode: string
+    productFor: string[]
+    category: {
+      name: string
+    }
+    subCategory: {
+      name: string
+    }
+    searchTag: string
+    itemImage: string
+  }
+  stock: number
+  headOffice: number
+  store: number
+  headOfficeAging: string
+  storeAging: string
+  dateAdded: string
 }
 
+interface ApiResponse {
+  success: boolean
+  data: InventoryItem[]
+  totals: {
+    totalInventory: number
+    totalHeadOffice: number
+    totalStore: number
+  }
+}
 
-const LiveInventoryTable: React.FC<LiveInventoryTableProps> = ({
-  eye,
-  enableRowModal = true,
-  onRowClick,
-  className,
-  columns,
-  data,
-  tableTitle,
-  rowsPerPageOptions = [5, 10, 15],
-  defaultRowsPerPage = 10,
-  searchable = true,
-  filterByStatus = true,
-  onEdit,
-  onDelete,
-  onDeleteConfirm,
-  tableDataAlignment = "center",
-  dealBy,
-  loading = false,
-}) => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(defaultRowsPerPage);
-  const [showDetailModal, setShowDetailModal] = useState<any>(null);
-  const [showTransferModal, setShowTransferModal] = useState<any>(null);
-  
+const getAuthToken = () => {
+  let token = localStorage.getItem("token")
+  if (!token) {
+    token = sessionStorage.getItem("token")
+  }
+  return token
+}
+
+const LiveInventory: React.FC = () => {
+  const [inventoryData, setInventoryData] = useState<InventoryItem[]>([])
+  const [filteredData, setFilteredData] = useState<InventoryItem[]>([])
+  const [loading, setLoading] = useState(false)
+  const [searchInput, setSearchInput] = useState("")
+  const [activeSearchTags, setActiveSearchTags] = useState<string[]>([])
+  const [totals, setTotals] = useState({
+    totalInventory: 0,
+    totalHeadOffice: 0,
+    totalStore: 0,
+  })
+
+  const columns: Column[] = [
+    { header: "S.No", accessor: "sno" },
+    { header: "Image", accessor: "image", type: "image" },
+    { header: "Barcode", accessor: "barcode" },
+    { header: "Product For", accessor: "productFor" },
+    { header: "Category", accessor: "category" },
+    { header: "Sub Category", accessor: "subCategory" },
+    { header: "Stock", accessor: "stock" },
+    { header: "Headoffice", accessor: "headoffice" },
+    { header: "Store", accessor: "store" },
+    { header: "Actions", accessor: "actions", type: "actions" },
+  ]
+
+  // Fetch inventory data from API
+  const fetchInventoryData = async () => {
+    setLoading(true)
+    try {
+      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000"
+      const token = getAuthToken()
+
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.")
+        return
+      }
+
+      const response = await axios.get<ApiResponse>(`${API_URL}/api/abid-jewelry-ms/inventory`, {
+        headers: {
+          "x-access-token": token,
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (response.data.success) {
+        setInventoryData(response.data.data)
+        setFilteredData(response.data.data)
+        setTotals(response.data.totals)
+      } else {
+        toast.error("Failed to fetch inventory data")
+      }
+    } catch (error) {
+      console.error("Error fetching inventory data:", error)
+      toast.error("Failed to fetch inventory data")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Transform API data to table format
+  const transformDataForTable = (data: InventoryItem[]) => {
+    return data.map((item, index) => ({
+      id: item._id,
+      sno: String(index + 1).padStart(2, "0"),
+      image: item?.itemId?.itemImage
+        ? `${import.meta.env.VITE_BASE_URL || "http://localhost:9000"}${item?.itemId?.itemImage}`
+        : "",
+      barcode: item?.itemId?.barcode,
+      productFor: item?.itemId?.productFor?.join(", "),
+      category: item?.itemId?.category?.name,
+      subCategory: item?.itemId?.subCategory?.name,
+      stock: item?.stock,
+      headoffice: item?.headOffice,
+      store: item?.store,
+      headOfficeAging: item?.headOfficeAging,
+      storeAging: item?.storeAging,
+      searchTags: item?.itemId?.searchTag,
+      originalData: item, // Keep original data for modal
+    }))
+  }
+
+  // Handle search functionality
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && searchInput.trim()) {
+      const searchTerm = searchInput.trim().toLowerCase()
+
+      // Add to active search tags if not already present
+      if (!activeSearchTags.includes(searchTerm)) {
+        setActiveSearchTags((prev) => [...prev, searchTerm])
+      }
+
+      // Filter data based on search tags
+      filterDataBySearchTags([...activeSearchTags, searchTerm])
+      setSearchInput("")
+    }
+  }
+
+  // Filter data based on active search tags
+  const filterDataBySearchTags = (tags: string[]) => {
+    if (tags.length === 0) {
+      setFilteredData(inventoryData)
+      return
+    }
+
+    const filtered = inventoryData.filter((item) => {
+      const searchTags = item.itemId.searchTag
+        .toLowerCase()
+        .split(",")
+        .map((tag) => tag.trim())
+      return tags.some((tag) => searchTags.some((searchTag) => searchTag.includes(tag.toLowerCase())))
+    })
+
+    setFilteredData(filtered)
+  }
+
+  // Remove search tag
+  const removeSearchTag = (tagToRemove: string) => {
+    const updatedTags = activeSearchTags.filter((tag) => tag !== tagToRemove)
+    setActiveSearchTags(updatedTags)
+    filterDataBySearchTags(updatedTags)
+  }
+
+  // Clear all search tags
+  const clearAllSearchTags = () => {
+    setActiveSearchTags([])
+    setFilteredData(inventoryData)
+  }
+
+  useEffect(() => {
+    fetchInventoryData()
+  }, [])
 
   return (
-    <>
-      <div
-        className={`bg-white rounded-xl flex flex-col gap-5 overflow-hidden shadow-md ${className}`}
-      >
-        {tableTitle && (
-          <p className="text-[#056BB7] font-semibold text-[24px]">
-            {tableTitle}
-          </p>
-        )}
+    <div className="w-full mx-auto px-3 py-6 sm:px-4 md:px-6 xl:px-8 xl:py-6 h-auto">
+      <div className="bg-white rounded-lg shadow-md px-4 md:px-5 py-6 !h-auto">
+        <p className="font-semibold text-[24px] mb-4">Live Inventory:</p>
 
-        {/* Table */}
-        <div className="bg-white rounded-xl border border-gray-300 overflow-x-auto">
-
-          {/* Pagination */}
-          <div className="flex flex-col md:flex-row items-center justify-between px-4 py-4">
-            <div className="flex items-center justify-center gap-2">
-              <button
-                onClick={() => handleChangePage(currentPage - 1)}
-                className="w-10 h-10 rounded-full border border-gray-300 hover:bg-gray-200 flex items-center justify-center disabled:opacity-50"
-                disabled={currentPage === 1}
-              >
-                <GoChevronLeft size={18} />
-              </button>
-
-              {/* Page Numbers */}
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum;
-                if (totalPages <= 5) {
-                  pageNum = i + 1;
-                } else if (currentPage <= 3) {
-                  pageNum = i + 1;
-                } else if (currentPage >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i;
-                } else {
-                  pageNum = currentPage - 2 + i;
-                }
-
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => handleChangePage(pageNum)}
-                    className={`w-8 h-8 rounded-full text-sm flex items-center justify-center transition ${
-                      currentPage === pageNum
-                        ? "bg-[#407BFF] text-white"
-                        : "bg-[#E5E7EB] text-black hover:bg-[#407BFF] hover:text-white"
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-
-              <button
-                onClick={() => handleChangePage(currentPage + 1)}
-                className="w-10 h-10 rounded-full border border-gray-300 hover:bg-gray-200 flex items-center justify-center disabled:opacity-50"
-                disabled={currentPage === totalPages}
-              >
-                <GoChevronRight size={18} />
-              </button>
+        {/* Search Section */}
+        <div className="flex justify-between flex-col md:flex-row gap-4 mb-6">
+          {/* Search Input */}
+          <div className="relative md:w-[400px]">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <IoIosSearch className="text-gray-500" size={20} />
             </div>
-
-            <div className="flex items-center gap-2 mt-2 md:mt-0">
-              <span className="text-sm">Show:</span>
-              <select
-                value={`${rowsPerPage} Row`}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value === "All") {
-                    setRowsPerPage(data.length);
-                  } else {
-                    const selected = Number.parseInt(value.split(" ")[0]);
-                    setRowsPerPage(selected);
-                  }
-                  setCurrentPage(1);
-                }}
-                className="bg-black text-white rounded px-2 py-1 min-w-[90px]"
-              >
-                <option value="10 Row">10 Row</option>
-                <option value="15 Row">15 Row</option>
-                <option value="20 Row">20 Row</option>
-                <option value="25 Row">25 Row</option>
-                <option value="All">All</option>
-              </select>
-            </div>
+            <input
+              type="text"
+              placeholder="Search by search tag"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={handleSearch}
+              className="w-auto pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            />
           </div>
-        </div>
-      </div>
 
-      {/* Detail Modal */}
-      {showDetailModal && (
-        <div
-          className="fixed inset-0 flex items-center justify-center bg-black/50 z-50"
-          onClick={() => {
-            setShowDetailModal(null);
-            setInventoryDetails(null);
-          }}
-        >
-          <div
-            className="animate-scaleIn bg-white rounded-xl shadow-lg p-6 w-[90%] max-w-[500px] max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900">
-                Inventory Details
-              </h2>
-              <button
-                onClick={() => {
-                  setShowDetailModal(null);
-                  setInventoryDetails(null);
-                }}
-                className="text-gray-500 hover:text-gray-700"
+          {/* Active Search Tags */}
+          <div className="flex flex-wrap gap-2 items-center">
+            {activeSearchTags.map((tag, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-1 bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm"
               >
-                <IoMdClose size={24} />
+                <span>{tag}</span>
+                <button onClick={() => removeSearchTag(tag)} className="hover:text-red-500">
+                  <IoMdClose size={14} />
+                </button>
+              </div>
+            ))}
+            {activeSearchTags.length > 0 && (
+              <button onClick={clearAllSearchTags} className="text-red-500 text-sm hover:underline">
+                Clear All
               </button>
-            </div>
-
-            {loadingDetails ? (
-              <div className="flex justify-center items-center h-40">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-              </div>
-            ) : inventoryDetails ? (
-              <div>
-                {/* Image */}
-                <div className="relative mb-4">
-                  <span className="bg-blue-600 absolute top-2 left-2 text-white text-xs font-semibold px-2 py-1 rounded z-10">
-                    {inventoryDetails.headOffice > 0 &&
-                    inventoryDetails.store > 0
-                      ? "BOTH"
-                      : inventoryDetails.headOffice > 0
-                      ? "HEAD OFFICE"
-                      : "STORE"}
-                  </span>
-                  <img
-                    src={
-                      inventoryDetails.itemId?.itemImage
-                        ? `${
-                            import.meta.env.VITE_BASE_URL ||
-                            "http://localhost:9000"
-                          }${inventoryDetails.itemId.itemImage}`
-                        : "/placeholder.svg?height=300&width=400"
-                    }
-                    alt="Inventory Item"
-                    className="w-full h-[250px] object-cover rounded-lg"
-                  />
-                </div>
-
-                {/* SKU and Barcode */}
-                <div className="flex justify-between items-center mb-4 text-sm">
-                  <span className="font-medium">
-                    <strong>SKU:</strong>{" "}
-                    {inventoryDetails.itemId?.prefixId?.prefixName}-
-                    {inventoryDetails.itemId?.autoGenerated}
-                  </span>
-                  <span className="font-medium">
-                    <strong>BARCODE:</strong> {inventoryDetails.itemId?.barcode}
-                  </span>
-                </div>
-
-                {/* Details Grid */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="font-bold text-gray-900 mb-3">DETAILS:</h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Category:</span>
-                        <span className="font-medium">
-                          {inventoryDetails.itemId?.category?.name}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Sub Category:</span>
-                        <span className="font-medium">
-                          {inventoryDetails.itemId?.subCategory?.name}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Product For:</span>
-                        <span className="font-medium">
-                          {inventoryDetails.itemId?.productFor?.join(", ")}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Diamond Weight:</span>
-                        <span className="font-medium">
-                          {inventoryDetails.itemId?.diamondWeight}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Gold Weight:</span>
-                        <span className="font-medium">
-                          {inventoryDetails.itemId?.goldWeight}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Length:</span>
-                        <span className="font-medium">
-                          {inventoryDetails.itemId?.length}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Size:</span>
-                        <span className="font-medium">
-                          {inventoryDetails.itemId?.size}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="font-bold text-gray-900 mb-3">
-                      STOCK INFO:
-                    </h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="text-blue-600 font-bold text-lg">
-                        Total: {inventoryDetails.stock}
-                      </div>
-                      <div className="text-green-600 font-medium">
-                        Head Office: {inventoryDetails.headOffice}
-                      </div>
-                      <div className="text-purple-600 font-medium">
-                        Store: {inventoryDetails.store}
-                      </div>
-                      {inventoryDetails.headOfficeAging && (
-                        <div className="text-gray-600 text-xs">
-                          HO Aging: {inventoryDetails.headOfficeAging}
-                        </div>
-                      )}
-                      {inventoryDetails.storeAging && (
-                        <div className="text-gray-600 text-xs">
-                          Store Aging: {inventoryDetails.storeAging}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex justify-center items-center h-40">
-                <div className="text-gray-500">No details available</div>
-              </div>
             )}
           </div>
         </div>
-      )}
 
-      {/* Transfer Modal */}
-      {showTransferModal && (
-        <div
-          className="fixed inset-0 flex items-center justify-center bg-black/50 z-50"
-          onClick={() => setShowTransferModal(null)}
-        >
-          <div
-            className="bg-white rounded-xl shadow-lg p-6 w-[90%] max-w-[400px]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900">
-                Transfer Inventory
-              </h2>
-              <button
-                onClick={() => setShowTransferModal(null)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <IoMdClose size={24} />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  From Location
-                </label>
-                <select
-                  value={transferData.fromLocation}
-                  onChange={(e) =>
-                    setTransferData((prev) => ({
-                      ...prev,
-                      fromLocation: e.target.value,
-                    }))
-                  }
-                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select Location</option>
-                  {showTransferModal.headoffice > 0 && (
-                    <option value="headoffice">Head Office</option>
-                  )}
-                  {showTransferModal.store > 0 && (
-                    <option value="store">Store</option>
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  To Location
-                </label>
-                <select
-                  value={transferData.toLocation}
-                  onChange={(e) =>
-                    setTransferData((prev) => ({
-                      ...prev,
-                      toLocation: e.target.value,
-                    }))
-                  }
-                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select Location</option>
-                  {transferData.fromLocation !== "headoffice" && (
-                    <option value="headoffice">Head Office</option>
-                  )}
-                  {transferData.fromLocation !== "store" && (
-                    <option value="store">Store</option>
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Quantity
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max={
-                    transferData.fromLocation === "headoffice"
-                      ? showTransferModal.headoffice
-                      : showTransferModal.store
-                  }
-                  value={transferData.quantity}
-                  onChange={(e) =>
-                    setTransferData((prev) => ({
-                      ...prev,
-                      quantity: Number.parseInt(e.target.value) || 0,
-                    }))
-                  }
-                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Available:{" "}
-                  {transferData.fromLocation === "headoffice"
-                    ? showTransferModal.headoffice
-                    : showTransferModal.store}
-                </p>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <Button
-                  text="back"
-                  onClick={() => setShowTransferModal(null)}
-                  //   variant="outline"
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  text="Transfer"
-                  onClick={handleTransfer}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                  disabled={
-                    !transferData.fromLocation ||
-                    !transferData.toLocation ||
-                    transferData.quantity <= 0
-                  }
-                >
-                  Transfer
-                </Button>
-              </div>
-            </div>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h3 className="text-sm font-medium text-blue-600">Total Inventory</h3>
+            <p className="text-2xl font-bold text-blue-800">{totals.totalInventory}</p>
+          </div>
+          <div className="bg-green-50 p-4 rounded-lg">
+            <h3 className="text-sm font-medium text-green-600">Head Office</h3>
+            <p className="text-2xl font-bold text-green-800">{totals.totalHeadOffice}</p>
+          </div>
+          <div className="bg-purple-50 p-4 rounded-lg">
+            <h3 className="text-sm font-medium text-purple-600">Store</h3>
+            <p className="text-2xl font-bold text-purple-800">{totals.totalStore}</p>
           </div>
         </div>
-      )}
-    </>
-  );
-};
 
-export default LiveInventoryTable;
+        {/* Table */}
+        <LiveInventoryTable
+          columns={columns}
+          data={transformDataForTable(filteredData)}
+          eye={true}
+          tableDataAlignment="center"
+          loading={loading}
+        />
+      </div>
+    </div>
+  )
+}
+
+export default LiveInventory

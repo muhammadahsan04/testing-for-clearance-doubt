@@ -45,6 +45,36 @@ interface Column {
   type?: ColumnType;
 }
 
+interface ZoneData {
+  _id: string;
+  zoneId: string;
+  name: string;
+  status: string;
+}
+
+interface StoreData {
+  _id: string;
+  uniqueStoreId: string;
+  storeName: string;
+  location: string;
+  managerId: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+  };
+  status: string;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  role: string;
+  status: string;
+  userImage?: string;
+  [key: string]: any;
+}
 
 interface SalesInvoiceTableProps {
   columns: Column[];
@@ -113,7 +143,19 @@ const SalesInvoiceTable: React.FC<SalesInvoiceTableProps> = ({
   // To these two state variables edit user
   const [isEditing, setIsEditing] = useState(false);
   const [editingRow, setEditingRow] = useState<any>(null);
-  const [formData, setFormData] = useState<any>(null);;
+  const [formData, setFormData] = useState<any>(null);
+  const [permState, setPermState] = useState<PermissionState>({});
+  const [zones, setZones] = useState<ZoneData[]>([]);
+  const [stores, setStores] = useState<StoreData[]>([]);
+  const [selectedZone, setSelectedZone] = useState("");
+  const [selectedStore, setSelectedStore] = useState("");
+  const [managerName, setManagerName] = useState("");
+  const [zoneOptions, setZoneOptions] = useState<string[]>([]);
+  const [storeOptions, setStoreOptions] = useState<string[]>([]);
+  const [isLoadingStores, setIsLoadingStores] = useState(false);
+  const [dueDate, setDueDate] = useState("");
+  const [selectedZoneId, setSelectedZoneId] = useState("");
+  const [selectedStoreId, setSelectedStoreId] = useState("");
 
   // console.log("row", row);
   const handleCheckboxChange = (
@@ -131,14 +173,44 @@ const SalesInvoiceTable: React.FC<SalesInvoiceTableProps> = ({
 
   const navigate = useNavigate();
   // Update the filteredData function in SalesInvoiceTable.tsx
-  const filteredData = data.filter((item) => {
-    // Only search through productName and barcode fields
-    const searchableText = `${item.productName || ""} ${item.barcode || ""
-      }`.toLowerCase();
-    const matchesSearch = searchableText.includes(search.toLowerCase());
+  // const filteredData = data.filter((item) => {
+  //   // Only search through productName and barcode fields
+  //   const searchableText = `${item.productName || ""} ${
+  //     item.barcode || ""
+  //   }`.toLowerCase();
+  //   const matchesSearch = searchableText.includes(search.toLowerCase());
 
+  //   const matchesStatus =
+  //     statusFilter === "All" || item.status === statusFilter;
+
+  //   return matchesSearch && matchesStatus;
+  // });
+
+  const filteredData = data.filter((item) => {
+    // Create a more comprehensive search that handles different data structures
+    const searchableFields = [
+      item.productName,
+      item.barcode,
+      item.originalData?.items?.itemBarcode?.barcode,
+      item.originalData?.items?.itemBarcode?.productName,
+      item.name,
+      item.id,
+      item.piId,
+      item.invoice,
+      item.refrence,
+    ].filter(Boolean); // Remove undefined/null values
+
+    const searchableText = searchableFields.join(" ").toLowerCase();
+    const matchesSearch =
+      search === "" || searchableText.includes(search.toLowerCase());
+
+    // Handle status filtering - check for different status field names
+    const itemStatus = item.status || item.originalData?.status || "";
     const matchesStatus =
-      statusFilter === "All" || item.status === statusFilter;
+      statusFilter === "All" ||
+      itemStatus.toLowerCase() === statusFilter.toLowerCase() ||
+      (statusFilter === "Active" && itemStatus === "active") ||
+      (statusFilter === "Inactive" && itemStatus === "inactive");
 
     return matchesSearch && matchesStatus;
   });
@@ -148,6 +220,26 @@ const SalesInvoiceTable: React.FC<SalesInvoiceTableProps> = ({
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage
   );
+
+  const handleChangePage = (page: number) => {
+    if (page >= 1 && page <= totalPages) setCurrentPage(page);
+  };
+  // console.log("DATA", isEditing);
+
+  const createSaleInvoiceColumns: CreateSaleInvoiceColumn[] = [
+    { header: "No", accessor: "no" },
+    { header: "Product Name", accessor: "productName", type: "image" },
+
+    // { header: "Image", accessor: "image", type: "image" },
+    { header: "Stock", accessor: "stock" },
+    { header: "QTY", accessor: "qty" },
+    { header: "Cost Price ($)", accessor: "costPrice" },
+    { header: "Sale Price ($)", accessor: "salePrice" },
+    // { header: "Sub Category", accessor: "subCategory" },
+    // { header: "Location", accessor: "location" },
+    // { header: "Actions", accessor: "actions", type: "actions" },
+  ];
+
   const createSaleInvoiceData = [
     {
       no: "01",
@@ -191,6 +283,110 @@ const SalesInvoiceTable: React.FC<SalesInvoiceTableProps> = ({
     setFormData({});
   };
 
+  const handleInvoiceCreated = () => {
+    setIsEditing(false); // Close the modal
+    // Reset form data
+    setSelectedZone("");
+    setSelectedStore("");
+    setManagerName("");
+    setDueDate("");
+    setSelectedZoneId("");
+    setSelectedStoreId("");
+    // Call the parent function to clear selections
+    onClearSelections();
+  };
+
+  // Fetch zones function
+  const fetchZones = async () => {
+    try {
+      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+      const token = getAuthToken();
+
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+
+      const response = await axios.get(
+        `${API_URL}/api/abid-jewelry-ms/getAllZones`,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        const zonesData = response.data.data;
+        setZones(zonesData);
+
+        // Extract zone names for dropdown
+        const zoneNames = zonesData.map((zone: ZoneData) => zone.name);
+        setZoneOptions(zoneNames);
+      } else {
+        toast.error(response.data.message || "Failed to fetch zones");
+      }
+    } catch (error) {
+      console.error("Error fetching zones:", error);
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(error.response.data.message || "Failed to fetch zones");
+        }
+      } else {
+        toast.error("An unexpected error occurred while fetching zones");
+      }
+    }
+  };
+
+  // Fetch stores function
+  const fetchStores = async () => {
+    setIsLoadingStores(true);
+    try {
+      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+      const token = getAuthToken();
+
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+
+      const response = await axios.get(
+        `${API_URL}/api/abid-jewelry-ms/getAllShops`,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success && Array.isArray(response.data.data)) {
+        setStores(response.data.data);
+
+        // Extract store names for dropdown
+        const storeNames = response.data.data.map(
+          (store: StoreData) => store.storeName
+        );
+        setStoreOptions(storeNames);
+      } else {
+        toast.warning("No stores found or invalid response format");
+      }
+    } catch (error) {
+      console.error("Error fetching stores:", error);
+      toast.error("Failed to fetch stores");
+    } finally {
+      setIsLoadingStores(false);
+    }
+  };
+
+  // Fetch zones and stores on component mount
+  useEffect(() => {
+    fetchZones();
+    fetchStores();
+  }, []);
 
   // Handle zone selection
   const handleZoneSelect = (zoneName: string) => {
@@ -200,6 +396,22 @@ const SalesInvoiceTable: React.FC<SalesInvoiceTableProps> = ({
     setSelectedStore("");
     setManagerName("");
   };
+
+  // const handleStoreSelect = (storeName: string) => {
+  //   setSelectedStore(storeName);
+
+  //   // Find the selected store and get manager details
+  //   const selectedStoreObj = stores.find(
+  //     (store) => store.storeName === storeName
+  //   );
+
+  //   if (selectedStoreObj && selectedStoreObj.managerId) {
+  //     const fullManagerName = `${selectedStoreObj.managerId.firstName} ${selectedStoreObj.managerId.lastName}`;
+  //     setManagerName(fullManagerName);
+  //   } else {
+  //     setManagerName("No manager assigned");
+  //   }
+  // };
 
   const handleStoreSelect = (storeName: string) => {
     setSelectedStore(storeName);
@@ -235,7 +447,7 @@ const SalesInvoiceTable: React.FC<SalesInvoiceTableProps> = ({
                 placeholder="Search Product Name, Barcode"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="max-w-full sm:max-w-2xl !rounded-3xl outline-none"
+                className="w-sm !rounded-3xl outline-none"
               />
             )}
 
@@ -270,6 +482,11 @@ const SalesInvoiceTable: React.FC<SalesInvoiceTableProps> = ({
           <p className="text-[#056BB7] font-semibold text-[24px]">
             {tableTitle}
           </p>
+
+          {/* if (!canCreate) {
+                toast.error("You don't have permission to create product sub-category");
+              } */}
+          {/* {canCreate && ( */}
           <Button
             text="Create Sale Invoice"
             className={`px-6 !bg-[#056BB7] border-none text-white ${!canCreate ? "opacity-70 !cursor-not-allowed" : ""
@@ -278,10 +495,261 @@ const SalesInvoiceTable: React.FC<SalesInvoiceTableProps> = ({
             disabled={!canCreate}
             onClick={handleCreateSaleInvoice}
           />
+          {/* )} */}
+          {/* <Button
+            text="Create Sale Invoice"
+            className="bg-[#056BB7] text-white border-none font-medium w-auto px-7"
+            onClick={handleCreateSaleInvoice}
+          /> */}
         </div>
 
         {/* Table */}
         <div className="bg-white rounded-xl border border-gray-300 overflow-x-auto">
+          <table className="w-full text-sm text-left text-gray-700 ">
+            <thead className="bg-[#F9FAFB] text-black">
+              {/* <tr className="font-semibold text-[16px] whitespace-nowrap border-2">
+                {columns.map((col) => (
+                  <th key={col.accessor} className="px-6 py-3">
+                    {col.header}
+                  </th>
+                ))}
+              </tr> */}
+
+              <tr className="font-semibold text-[16px] whitespace-nowrap w-full">
+                {columns.map((col, index) => {
+                  const isSecond = index === 1;
+                  const isSecondLast = index === columns.length - 2;
+                  const isLast = index === columns.length - 1;
+
+                  return (
+                    <th
+                      key={col.accessor}
+                      className="px-6 py-3"
+                      style={{ width: "max-content" }}
+                    >
+                      <div
+                        className={`flex flex-row items-center ${isSecond
+                          ? "justify-start"
+                          : isSecondLast
+                            ? "justify-center"
+                            : isLast
+                              ? "justify-center"
+                              : tableDataAlignment === "zone"
+                                ? "justify-center"
+                                : "justify-start"
+                          // : "justify-center" for zone
+                          // "justify-start"
+                          }`}
+                      >
+                        {col.header}
+                      </div>
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody className="border-b border-gray-400">
+              {currentData.map((row, idx) => (
+                // Update the row click handler in the tr element:
+                <tr
+                  key={idx}
+                  className="hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                  onClick={() => {
+                    if (onRowClick) {
+                      onRowClick(row);
+                    } else if (enableRowModal) {
+                      setSelectedUser(row);
+                    }
+                  }}
+                >
+                  {columns.map((col, index) => {
+                    const isSecond = index === 1;
+                    const isSecondLast = index === columns.length - 2;
+                    const isLast = index === columns.length - 1;
+
+                    return (
+                      <td
+                        key={col.accessor}
+                        className="px-6 py-2"
+                        style={{ width: "max-content" }}
+                      >
+                        <div
+                          className={`flex flex-row items-center ${isSecond
+                            ? "justify-start"
+                            : isSecondLast
+                              ? "justify-center"
+                              : isLast
+                                ? "justify-center"
+                                : tableDataAlignment === "zone"
+                                  ? "justify-center"
+                                  : "justify-start"
+                            // : "justify-center" for zone
+                            // "justify-start"
+                            }`}
+                        >
+                          {(() => {
+                            switch (col.type) {
+                              // In the SalesInvoiceTable component, update the "select" case in the switch statement:
+
+                              case "select":
+                                return (
+                                  <div
+                                    className="flex gap-2 items-center"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={
+                                        selectedRows[
+                                        row.originalData?.items?.itemBarcode
+                                          ?._id
+                                        ] || false
+                                      }
+                                      onChange={(e) => {
+                                        e.stopPropagation();
+                                        console.log("row", row);
+
+                                        onRowSelect(
+                                          row.originalData?.items?.itemBarcode
+                                            ?._id
+                                        );
+                                      }}
+                                      className="form-checkbox h-4 w-4 text-blue-600 cursor-pointer"
+                                    />
+                                  </div>
+                                );
+
+                              // case "image":
+                              //   return (
+                              //     <div className="flex gap-2 items-center">
+                              //       {row.userImage ? (
+                              //         <>
+                              //           <img
+                              //             src={row.userImage}
+                              //             alt="User"
+                              //             className="w-8 h-8 rounded-full"
+                              //           />
+                              //           {row.productName}
+                              //         </>
+                              //       ) : (
+                              //         <>{row.productName}</>
+                              //       )}
+                              //     </div>
+                              //   );
+                              // case "status":
+                              //   return (
+                              //     <span
+                              //       className={`inline-block px-2 py-1 text-xs rounded-full ${
+                              //         row.status === "Active"
+                              //           ? "bg-green-100 text-green-600"
+                              //           : "bg-red-100 text-red-600"
+                              //       }`}
+                              //     >
+                              //       {row.status}
+                              //     </span>
+                              //   );
+
+                              // In the switch statement for rendering table cells, update the "image" case:
+
+                              case "image":
+                                return (
+                                  <div className="flex gap-2 items-center">
+                                    {row.userImage ? (
+                                      <>
+                                        <img
+                                          src={row.userImage}
+                                          alt="Product"
+                                          className="w-8 h-8 rounded-full object-cover"
+                                          onError={(e) => {
+                                            // Hide image if it fails to load
+                                            e.currentTarget.style.display =
+                                              "none";
+                                          }}
+                                        />
+                                        <span>{row.productName}</span>
+                                      </>
+                                    ) : (
+                                      // Only show product name if no image
+                                      <span>{row.productName}</span>
+                                    )}
+                                  </div>
+                                );
+
+                              case "status":
+                                return (
+                                  <span
+                                    className={`inline-block px-2 py-1 text-xs rounded-full ${row.status === "active"
+                                      ? "bg-green-100 text-green-600"
+                                      : "bg-red-100 text-red-600"
+                                      }`}
+                                  >
+                                    {row.status}
+                                  </span>
+                                );
+
+                              case "actions":
+                                return (
+                                  <div className="flex justify-center gap-2">
+                                    {eye && (
+                                      <LuEye
+                                        className="cursor-pointer"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          // navigate("purchase-order-detail");
+                                        }}
+                                      />
+                                    )}
+                                    {/* <RiEditLine
+                                      className="cursor-pointer"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsEditing(true); // Set isEditing to true
+                                        setEditingRow(row); // Store the row data in editingRow
+                                      }}
+                                    /> */}
+
+                                    <RiEditLine
+                                      className="cursor-pointer"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsEditing(true);
+                                        setEditingRow(row);
+                                        setFormData({ ...row }); // Initialize form data with the row data
+                                      }}
+                                    />
+
+                                    <AiOutlineDelete
+                                      className="cursor-pointer hover:text-red-500"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowDeleteModal(true);
+                                        setDeleteUser(row);
+                                      }}
+                                    />
+                                  </div>
+                                );
+                              default:
+                                return <>{row[col.accessor]}</>;
+                            }
+                          })()}
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+              {currentData.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={columns.length}
+                    className="text-center py-6 text-gray-500"
+                  >
+                    No data found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
 
           {/* Pagination */}
           <div
@@ -454,6 +922,68 @@ const SalesInvoiceTable: React.FC<SalesInvoiceTableProps> = ({
         </div>
       )}
 
+      {showDeleteModal && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black/20 z-50"
+          onClick={() => {
+            setShowDeleteModal(false);
+            setDeleteUser(null);
+          }}
+        >
+          <div
+            className="animate-scaleIn bg-white rounded-xl w-full max-w-md relative shadow-lg border-3 border-gray-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center py-4 px-6 shadow-[0_2px_2px_0_#00000026]">
+              <h2 className="text-xl font-medium">Delete {deleteUser.role}</h2>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="text-xl font-bold text-gray-500 hover:text-gray-700"
+              >
+                ×
+              </button>
+            </div>
+            <div className="mt-8 text-start pb-8 px-6 shadow-[0_2px_2px_0_#00000026]">
+              <h3 className="text-lg font-semibold mb-1">
+                Delete{" "}
+                {tableTitle?.endsWith("s")
+                  ? tableTitle?.slice(0, -1)
+                  : tableTitle}
+                ?
+              </h3>
+              <p className="text-sm text-gray-700">
+                Are you sure you want to delete this{" "}
+                {tableTitle?.endsWith("s")
+                  ? tableTitle?.slice(0, -1)
+                  : tableTitle}
+                ?
+              </p>
+              <p className="text-sm text-red-600 font-medium mt-1">
+                This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex justify-center gap-2 pb-3 py-4 px-6 shadow-[0_2px_2px_0_#00000026]">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-5 py-1 rounded-md hover:bg-gray-100 border-none shadow-[inset_0_0_4px_#00000026]"
+              >
+                Cancel
+              </button>
+              <Button
+                text="Delete"
+                icon={<AiOutlineDelete />}
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteModal(true);
+                }}
+                className="!border-none px-5 py-1 bg-[#DC2626] hover:bg-red-700 text-white rounded-md flex items-center gap-1"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {isEditing && (
         <>
           <div
@@ -461,7 +991,7 @@ const SalesInvoiceTable: React.FC<SalesInvoiceTableProps> = ({
             onClick={() => setIsEditing(false)}
           >
             <div
-              className="animate-scaleIn bg-white w-[90vw] overflow-hidden sm:w-lg md:w-[80vw] lg:w-4xl h-[75vh] overflow-y-auto rounded-[7px] shadow-lg p-6"
+              className="animate-scaleIn bg-white w-[90vw] overflow-hidden sm:w-lg md:w-[80vw] lg:w-4xl h-auto overflow-y-auto rounded-[7px] shadow-lg p-6"
               onClick={(e) => e.stopPropagation()}
             >
               <form
@@ -553,6 +1083,7 @@ const SalesInvoiceTable: React.FC<SalesInvoiceTableProps> = ({
                   setSelectedUser(row);
                   setShowDeleteModal(true);
                 }}
+                onClose={() => setIsEditing(false)} // Add this line
               />
             </div>
           </div>

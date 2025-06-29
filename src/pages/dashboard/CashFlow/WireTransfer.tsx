@@ -127,7 +127,7 @@ export default function WireTransfer() {
   ];
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+    <div className="w-full mx-auto px-4 py-6 sm:px-6 lg:px-8">
       <h1 className="text-2xl font-bold text-gray-900 mb-4">Cash Flow</h1>
 
       {/* Summary Cards */}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { AiOutlineDelete } from "react-icons/ai";
 import { RiEditLine } from "react-icons/ri";
 import { GoChevronLeft, GoChevronRight } from "react-icons/go";
@@ -94,14 +94,6 @@ const PurchaseInvoiceTable: React.FC<PurchaseInvoiceTableProps> = ({
   canDelete = true,
   canCreate = true,
 }) => {
-  // const [editModal, setEditModal] = useState(false);
-  // const [editFormData, setEditFormData] = useState({
-  //   supplierCompanyName: "",
-  //   dateReceiving: "",
-  //   dueDate: "",
-  //   description: "",
-  // });
-  // const [supplierOptions, setSupplierOptions] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [invoiceDetail, setInvoiceDetail] = useState<any>(null);
@@ -109,11 +101,11 @@ const PurchaseInvoiceTable: React.FC<PurchaseInvoiceTableProps> = ({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [isEditing, setIsEditing] = useState(false);
   const [editingRow, setEditingRow] = useState<any>(null);
   const [formData, setFormData] = useState<any>(null);
-  const [dateRange, setDateRange] = useState("");
+  // const [dateRange, setDateRange] = useState("");
   const [supplier, setSupplier] = useState("");
   const [isOpen, setIsOpen] = React.useState(false);
   const [loading, setLoading] = useState(false);
@@ -129,7 +121,6 @@ const PurchaseInvoiceTable: React.FC<PurchaseInvoiceTableProps> = ({
     if (!data || data.length === 0) return data; // Return original data if empty
 
     return data.filter((item) => {
-      console.log("data", item?.invoiceDate);
       const matchesSearch =
         searchTerm === "" ||
         Object.values(item).some((value) =>
@@ -183,20 +174,50 @@ const PurchaseInvoiceTable: React.FC<PurchaseInvoiceTableProps> = ({
 
   const handleViewDetails = async (row: any) => {
     try {
-      setLoading(true);
+      setIsOpen(true); // Open modal immediately
+      setLoading(true); // Show loader in modal
+      setInvoiceDetail(null); // Clear previous data
+      // alert("fsdf");
+
       const response = await purchaseInvoiceApi.getPurchaseInvoiceById(row._id);
 
       if (response.success) {
         // Transform items data for the modal
+        console.log("dasdasd", response.data);
+
+        // const transformedItems = response.data.items.map((item: any) => ({
+        //   itemdescription:
+        //     item.itemBarcode?.category?.name ||
+        //     item.purchaseOrderId?.category?.name ||
+        //     "N/A",
+        //   qty: item?.quantity,
+        //   costPrice: item?.costPrice,
+        //   sellPrice: item?.sellPrice,
+        //   amount: item?.totalPriceOfCostItems,
+        //   userImage: item?.itemBarcode?.itemImage
+        //     ? `${
+        //         import.meta.env.VITE_BASE_URL || "http://192.168.100.18:9000"
+        //       }${item?.itemBarcode?.itemImage}`
+        //     : null,
+        // }));
+
         const transformedItems = response.data.items.map((item: any) => ({
           itemdescription:
-            item.itemBarcode?.barcode ||
-            item.purchaseOrderId?.purchaseOrderId ||
+            item.itemBarcode?.category?.name ||
+            item.purchaseOrderId?.category?.name ||
             "N/A",
-          qty: item.quantity,
-          costPrice: item.costPrice,
-          sellPrice: item.sellPrice,
-          amount: item.totalPriceOfCostItems,
+          qty: item?.quantity,
+          costPrice: item?.costPrice,
+          sellPrice: item?.sellPrice,
+          amount: item?.totalPriceOfCostItems,
+          userImage: item?.itemBarcode?.itemImage
+            ? `${import.meta.env.VITE_BASE_URL || "http://192.168.100.18:9000"
+            }${item?.itemBarcode?.itemImage}`
+            : null,
+          productName:
+            item?.itemBarcode?.category?.name ||
+            item?.purchaseOrderId?.category?.name ||
+            "N/A",
         }));
 
         setInvoiceDetail({
@@ -207,6 +228,7 @@ const PurchaseInvoiceTable: React.FC<PurchaseInvoiceTableProps> = ({
       }
     } catch (error) {
       console.error("Error fetching invoice details:", error);
+      setIsOpen(false); // Close modal on error
     } finally {
       setLoading(false);
     }
@@ -231,13 +253,12 @@ const PurchaseInvoiceTable: React.FC<PurchaseInvoiceTableProps> = ({
   };
 
   const PurchaseInvoiceDetail = [
-    { header: "ITEM DESCRIPTION", accessor: "itemdescription" },
+    { header: "ITEM DESCRIPTION", accessor: "itemdescription", type: "image" },
     { header: "QTY", accessor: "qty" },
     { header: "COST PRICE ($)", accessor: "costPrice" },
     { header: "SELL PRICE ($)", accessor: "sellPrice" },
     { header: "AMOUNT ($)", accessor: "amount" },
   ];
-
   const handleEdit = (row: any) => {
     if (!canUpdate) {
       toast.error("You don't have permission to edit purchase invoice");
@@ -247,6 +268,7 @@ const PurchaseInvoiceTable: React.FC<PurchaseInvoiceTableProps> = ({
       `/dashboard/inventory/purchase-invoice/update-purchase-invoice/${row._id}`
     );
   };
+
   return (
     <>
       <div
@@ -320,6 +342,32 @@ const PurchaseInvoiceTable: React.FC<PurchaseInvoiceTableProps> = ({
             />
           </div>
         </div>
+
+        {/* Summary */}
+        <div className="bg-[#FCF3EC] py-3 px-4 rounded-md flex justify-end gap-6 text-md font-semibold">
+          <div>
+            Debit:{" "}
+            <span className="font-medium">
+              ${summaryData?.debit?.toLocaleString() || "0"}
+            </span>
+          </div>
+          <div>
+            Credit:{" "}
+            <span className="font-medium">
+              ${summaryData?.credit?.toLocaleString() || "0"}
+            </span>
+          </div>
+          <div>
+            Balance:{" "}
+            <span className="font-medium">
+              ${summaryData?.balance?.toLocaleString() || "0"}
+            </span>
+          </div>
+        </div>
+
+        <p className="text-[#5D6679] font-semibold text-[24px] pl-6">
+          {tableTitle}
+        </p>
 
         <div className="bg-white rounded-xl border border-gray-300 overflow-x-auto">
           <table className="w-full text-sm text-left text-gray-700">
@@ -529,6 +577,27 @@ const PurchaseInvoiceTable: React.FC<PurchaseInvoiceTableProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Invoice Detail Modal */}
+      {invoiceDetail && (
+        <InvoiceDetailModal
+          isOpen={true}
+          onClose={() => {
+            setInvoiceDetail(null);
+            setIsOpen(false);
+            setLoading(false);
+          }}
+          columns={PurchaseInvoiceDetail}
+          data={invoiceDetail.transformedItems || []}
+          invoiceData={invoiceDetail}
+          loading={loading}
+          loader={
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          }
+        />
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (

@@ -67,7 +67,7 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
   canDelete = true,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [deletePayment, setDeletePayment] = useState<any>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -96,6 +96,77 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
         ...formData,
         description: e.target.value,
       });
+    }
+  };
+
+  // Function to fetch payment details for editing
+  const fetchPaymentDetails = async (paymentId: string) => {
+    setIsSubmitting(true);
+    try {
+      if (!canUpdate) {
+        toast.error("You don't have permission to edit payment mode");
+        return;
+      }
+      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+      const token = getAuthToken();
+
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return false;
+      }
+
+      const response = await axios.get(
+        `${API_URL}/api/abid-jewelry-ms/getOnePayment/${paymentId}`,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        const paymentData = response.data.data;
+        setFormData({
+          name: paymentData.name,
+          description: paymentData.description || "",
+          status:
+            paymentData.status.charAt(0).toUpperCase() +
+            paymentData.status.slice(1),
+        });
+        return true;
+      } else {
+        toast.error(response.data.message || "Failed to fetch payment details");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error fetching payment details:", error);
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(
+            error.response.data.message || "Failed to fetch payment details"
+          );
+        }
+      } else {
+        toast.error(
+          "An unexpected error occurred while fetching payment details"
+        );
+      }
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Function to handle edit button click
+  const handleEditClick = async (row: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingRow(row);
+    const success = await fetchPaymentDetails(row._id);
+    if (success) {
+      setIsEditing(true);
     }
   };
 
@@ -585,6 +656,66 @@ const PaymentTable: React.FC<PaymentTableProps> = ({
             </div>
           </div>
         </>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && canDelete && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black/20 z-50 border"
+          onClick={() => {
+            setShowDeleteModal(false);
+            setDeletePayment(null);
+          }}
+        >
+          <div
+            className="animate-scaleIn bg-white rounded-xl w-full max-w-md relative shadow-lg border-3 border-gray-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center py-4 px-6 shadow-[0_2px_2px_0_#00000026]">
+              <h2 className="text-xl font-medium">
+                Delete {deletePayment?.name}
+              </h2>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="text-xl font-bold text-gray-500 hover:text-gray-700"
+              >
+                ×
+              </button>
+            </div>
+            <div className="mt-8 text-start pb-8 px-6 shadow-[0_2px_2px_0_#00000026]">
+              <h3 className="text-lg font-semibold mb-1">
+                Delete{" "}
+                {tableTitle?.endsWith("s")
+                  ? tableTitle?.slice(0, -1)
+                  : tableTitle}
+              </h3>
+              <p className="text-sm text-gray-700">
+                Are you sure you want to delete this{" "}
+                {tableTitle?.endsWith("s")
+                  ? tableTitle?.slice(0, -1)
+                  : tableTitle}
+              </p>
+              <p className="text-sm text-red-600 font-medium mt-1">
+                This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex justify-center gap-2 pb-3 py-4 px-6 shadow-[0_2px_2px_0_#00000026]">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-5 py-1 rounded-md hover:bg-gray-100 border-none shadow-[inset_0_0_4px_#00000026]"
+              >
+                Cancel
+              </button>
+              <Button
+                text="Delete"
+                icon={<AiOutlineDelete />}
+                onClick={handleDeleteConfirm}
+                className="!border-none px-5 py-1 bg-[#DC2626] hover:bg-red-700 text-white rounded-md flex items-center gap-1"
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Delete Success Modal */}

@@ -11,7 +11,7 @@ import axios from "axios";
 import { hasPermission } from "../sections/CoreSettings";
 
 interface Column {
-  header: string;
+  header: string; 
   accessor: string;
   type?: "text" | "image" | "status" | "actions" | "input";
 }
@@ -61,7 +61,6 @@ const getUserRole = () => {
   return role;
 };
 
-
 const CreatePurchaseInvoice: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -82,13 +81,6 @@ const CreatePurchaseInvoice: React.FC = () => {
     termsAndConditions: "",
   });
 
-  useEffect(() => {
-    if (!canCreate) {
-      toast.error("You don't have permission to create purchase invoice");
-      navigate(-1);
-    }
-  }, [canCreate]);
-
   const createPurchaseInvoiceColumn: Column[] = [
     { header: "S.no", accessor: "sno", type: "text" },
     { header: "Barcode", accessor: "barcode", type: "text" },
@@ -105,6 +97,19 @@ const CreatePurchaseInvoice: React.FC = () => {
     { header: "Sale Price", accessor: "salePrice", type: "input" },
     { header: "Actions", accessor: "actions", type: "actions" },
   ];
+
+  // Permission variables add
+  const userRole = getUserRole();
+  const isAdmin = userRole === "Admin" || userRole === "SuperAdmin";
+  const canCreate = isAdmin || hasPermission("Inventory", "create");
+
+  useEffect(() => {
+    if (!canCreate) {
+      toast.error("You don't have permission to create purchase invoice");
+      navigate(-1);
+    }
+  }, [canCreate]);
+
 
   const navigate = useNavigate();
 
@@ -210,6 +215,73 @@ const CreatePurchaseInvoice: React.FC = () => {
     }
   };
 
+  const fetchItemByBarcode = async (barcodeValue: string) => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+
+      setLoading(true);
+      const API_URL =
+        import.meta.env.VITE_BASE_URL || "http://192.168.100.18:9000";
+      const response = await fetch(
+        `${API_URL}/api/abid-jewelry-ms/getItemByBarcode`,
+        {
+          method: "POST",
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ barcode: barcodeValue }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        const item = result.data;
+        const previousPrices = result.previousCostPricesHistory
+          .slice(-3) // Get last 3
+          .reverse() // Show newest first
+          .map((history: any) => history.price)
+          .join(" / ");
+
+        console.log("item createeeee", item);
+
+        const newItem: PurchaseInvoiceItem = {
+          userImage: item.itemImage ? `${API_URL}${item.itemImage}` : "",
+          sno: (createPurchaseInvoiceData.length + 1)
+            .toString()
+            .padStart(2, "0"),
+          barcode: item.barcode,
+          refrenceNumber: item?.refrenceNumber || "N/A",
+          productName: item.category?.name || "Unknown Product",
+          qty: 0,
+          previousBuying: previousPrices || "N/A",
+          costPrice: 0,
+          total: 0,
+          salePrice: 0,
+          action: "eye",
+          itemId: item._id,
+        };
+
+        setCreatePurchaseInvoiceData((prev) => [...prev, newItem]);
+        toast.success(`Item "${newItem.productName}" added successfully`);
+      } else {
+        toast.error(result.message || "Item not found with this barcode");
+      }
+    } catch (error) {
+      console.error("Error fetching item by barcode:", error);
+      toast.error(
+        "Error fetching item. Please check your connection and try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchPurchaseOrderById = async (orderId: string) => {
     try {
       const token = getAuthToken();
@@ -220,7 +292,7 @@ const CreatePurchaseInvoice: React.FC = () => {
 
       setLoading(true);
       const response = await fetch(
-        "http://192.168.100.254:9000/api/abid-jewelry-ms/getPurchaseOrderByOrderId",
+        `${API_URL}/api/abid-jewelry-ms/getPurchaseOrderByOrderId`,
         {
           method: "POST",
           headers: {
@@ -306,6 +378,160 @@ const CreatePurchaseInvoice: React.FC = () => {
     }));
   };
 
+  // const handleItemUpdate = (index: number, field: string, value: any) => {
+  //   setCreatePurchaseInvoiceData((prev) => {
+  //     const updated = [...prev];
+  //     updated[index] = { ...updated[index], [field]: value };
+
+  //     // Calculate total when qty or costPrice changes
+  //     if (field === "qty" || field === "costPrice") {
+  //       updated[index].total = updated[index].qty * updated[index].costPrice;
+  //     }
+
+  //     return updated;
+  //   });
+  // };
+
+  const handleItemUpdate = (index: number, field: string, value: any) => {
+    setCreatePurchaseInvoiceData((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+
+      // Calculate total when qty or costPrice changes, but only if both have valid values
+      if (field === "qty" || field === "costPrice") {
+        const qty =
+          field === "qty"
+            ? value === ""
+              ? 0
+              : parseFloat(value) || 0
+            : updated[index].qty;
+        const costPrice =
+          field === "costPrice"
+            ? value === ""
+              ? 0
+              : parseFloat(value) || 0
+            : updated[index].costPrice;
+        updated[index].total = qty * costPrice;
+      }
+
+      return updated;
+    });
+  };
+
+  const handleDeleteItem = (index: number) => {
+    setCreatePurchaseInvoiceData((prev) => {
+      const updated = prev.filter((_, i) => i !== index);
+      // Update serial numbers
+      const reindexed = updated.map((item, i) => ({
+        ...item,
+        sno: (i + 1).toString().padStart(2, "0"),
+      }));
+      toast.success("Item removed successfully");
+      return reindexed;
+    });
+  };
+
+  // const handleCreateInvoice = async () => {
+  //   if (!validateInvoiceCreation()) {
+  //     return;
+  //   }
+
+  //   try {
+  //     setLoading(true);
+  //     // Here you would typically make an API call to create the invoice
+  //     // const response = await createPurchaseInvoiceAPI(invoiceData);
+
+  //     // Simulate API call
+  //     await new Promise((resolve) => setTimeout(resolve, 2000));
+
+  //     toast.success("Purchase invoice created successfully!");
+  //     // Navigate to invoice list or detail page
+  //     // navigate("/dashboard/inventory/purchase-invoice");
+  //   } catch (error) {
+  //     console.error("Error creating invoice:", error);
+  //     toast.error("Failed to create invoice. Please try again.");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  const handleCreateInvoice = async () => {
+    if (!validateInvoiceCreation()) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+
+      // Find supplier ID from suppliers array
+      const selectedSupplier = suppliers.find(
+        (supplier) => supplier.companyName === formData.supplierCompanyName
+      );
+
+      if (!selectedSupplier) {
+        toast.error("Please select a valid supplier");
+        return;
+      }
+
+      // Prepare items array
+      const items = createPurchaseInvoiceData.map((item) => {
+        const itemData: any = {
+          quantity: item.qty,
+          costPrice: item.costPrice,
+          sellPrice: item.salePrice,
+        };
+
+        if (item.itemId) {
+          console.log("item.itemId", item);
+
+          itemData.itemBarcode = item.itemId;
+        } else if (item.purchaseOrderId) {
+          console.log("item.purchaseOrderId", item.purchaseOrderId);
+          itemData.purchaseOrderId = item.purchaseOrderId;
+        }
+
+        return itemData;
+      });
+
+      const requestBody = {
+        supplierCompanyName: selectedSupplier._id,
+        referenceNumber: formData.referenceNumber,
+        dateReceiving: formData.dateOfReceiving,
+        dueDate: formData.paymentDueDate,
+        items: items,
+        description: formData.termsAndConditions,
+      };
+
+      const response = await axios.post(
+        `${API_URL}/api/abid-jewelry-ms/addPurchaseInvoice`,
+        requestBody,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Purchase invoice created successfully!");
+        navigate("/dashboard/inventory/purchase-invoice");
+      } else {
+        toast.error(response.data.message || "Failed to create invoice");
+      }
+    } catch (error) {
+      console.error("Error creating invoice:", error);
+      toast.error("Failed to create invoice. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -333,9 +559,9 @@ const CreatePurchaseInvoice: React.FC = () => {
         <h2 className="text-2xl font-semibold text-[#056BB7] mb-3">
           Create Purchase Invoice
         </h2>
-        <p className="font-bold text-gray-300 underline text-[20px] mb-3">
+        {/* <p className="font-bold text-gray-300 underline text-[20px] mb-3">
           Invoice #PI-837529
-        </p>
+        </p> */}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 gap-y-6 mb-8 Poppins-font font-medium text-sm">
           <div className="flex flex-col">
@@ -349,6 +575,8 @@ const CreatePurchaseInvoice: React.FC = () => {
               onSelect={(value) =>
                 handleInputChange("supplierCompanyName", value)
               }
+              noResultsMessage="No supplier found"
+              searchable={true}
             />
           </div>
           <div className="flex flex-col">
@@ -434,7 +662,7 @@ const CreatePurchaseInvoice: React.FC = () => {
 
         <div className="mb-4">
           <CreatePurchaseInvoiceTable
-            eye={true}
+            eye={false}
             columns={createPurchaseInvoiceColumn}
             data={createPurchaseInvoiceData}
             tableTitle="Purchase Invoice"

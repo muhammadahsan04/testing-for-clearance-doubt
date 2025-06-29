@@ -130,6 +130,12 @@ export default function AddItem() {
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [selectedSubCategoryId, setSelectedSubCategoryId] = useState("");
 
+  const [categoryDropdownKey, setCategoryDropdownKey] = useState(0);
+  const [subCategoryDropdownKey, setSubCategoryDropdownKey] = useState(0);
+  const [styleDropdownKey, setStyleDropdownKey] = useState(0);
+  const [goldCategoryDropdownKey, setGoldCategoryDropdownKey] = useState(0);
+  const [prefixDropdownKey, setPrefixDropdownKey] = useState(0);
+
   // Form state variables
   const [unitType, setUnitType] = useState("");
   const [productFor, setProductFor] = useState<string[]>([]);
@@ -143,6 +149,7 @@ export default function AddItem() {
   // Add state for multiple gallery images
   const [galleryImageFiles, setGalleryImageFiles] = useState<UploadFile[]>([]);
 
+  const [isLoading, setIsLoading] = useState(false);
   // Add state for productFor validation error
   const [productForError, setProductForError] = useState("");
 
@@ -218,8 +225,8 @@ export default function AddItem() {
             status: item.status || "Active",
           })
         );
-        console.log('transformedData' , transformedData);
-        
+        // console.log("transformedData", transformedData);
+
         setItemsData(transformedData);
       }
     } catch (error) {
@@ -734,6 +741,32 @@ export default function AddItem() {
     }
   };
 
+  // Handle Add Sub Category
+  const handleAddSubCategory = async () => {
+    if (!newSubCategory.trim()) {
+      toast.error("Sub-category name is required");
+      return;
+    }
+    if (!selectedCategory) {
+      toast.error("Please select a category");
+      return;
+    }
+
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+
+      const selectedCategoryObj = categoryData.find(
+        (cat) => cat.name === selectedCategory
+      );
+      if (!selectedCategoryObj) {
+        toast.error("Selected category not found");
+        return;
+      }
+
       const payload = {
         name: newSubCategory,
         category: selectedCategoryObj._id,
@@ -788,6 +821,164 @@ export default function AddItem() {
         return;
       }
 
+      const payload = {
+        name: newStyle,
+        description: newStyleDescription,
+      };
+
+      const response = await axios.post(
+        `${API_URL}/api/abid-jewelry-ms/addStyle`,
+        payload,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Style added successfully!");
+        setNewStyle("");
+        setNewStyleDescription("");
+        setIsStyleModalOpen(false);
+        fetchStyles();
+      } else {
+        toast.error(response.data.message || "Failed to add style");
+      }
+    } catch (error) {
+      console.error("Error adding style:", error);
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(error.response.data.message || "Failed to add style");
+        }
+      } else {
+        toast.error("An unexpected error occurred while adding style");
+      }
+    }
+  };
+
+  // Fetch Styles
+  const fetchStyles = async () => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+
+      const response = await axios.get(
+        `${API_URL}/api/abid-jewelry-ms/getAllStyle`,
+        {
+          headers: {
+            "x-access-token": token,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setStyleData(response.data.data);
+        setStyles(response.data.data.map((style: any) => style.name));
+      }
+    } catch (error) {
+      console.error("Error fetching styles:", error);
+      toast.error("Failed to fetch styles");
+    }
+  };
+
+  // Handle Add Gold Category
+  const handleAddGoldCategory = async () => {
+    if (!newGoldCategory.trim()) {
+      toast.error("Gold category name is required");
+      return;
+    }
+
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+
+      const payload = {
+        name: newGoldCategory,
+        description: newGoldCategoryDescription,
+      };
+
+      const response = await axios.post(
+        `${API_URL}/api/abid-jewelry-ms/createGoldCategory`,
+        payload,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Gold category added successfully!");
+        setNewGoldCategory("");
+        setNewGoldCategoryDescription("");
+        setIsGoldCategoryModalOpen(false);
+        fetchGoldCategories();
+      } else {
+        toast.error(response.data.message || "Failed to add gold category");
+      }
+    } catch (error) {
+      console.error("Error adding gold category:", error);
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(
+            error.response.data.message || "Failed to add gold category"
+          );
+        }
+      } else {
+        toast.error("An unexpected error occurred while adding gold category");
+      }
+    }
+  };
+
+  // Fetch Gold Categories
+  const fetchGoldCategories = async () => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+
+      const response = await axios.get(
+        `${API_URL}/api/abid-jewelry-ms/getAllGoldCategories`,
+        {
+          headers: {
+            "x-access-token": token,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setGoldCategoryData(response.data.data);
+        setGoldCategories(
+          response.data.data.map((goldCat: any) => goldCat.name)
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching gold categories:", error);
+      toast.error("Failed to fetch gold categories");
+    }
+  };
+
+  // Update the gallery upload props to handle multiple files
+  const galleryProps: UploadProps = {
+    name: "file",
+    multiple: true,
+    maxCount: 4, // Limit to 4 images
+    fileList: galleryImageFiles,
     beforeUpload: (file) => {
       // Prevent auto upload, we'll handle it manually
       return false;
@@ -824,6 +1015,7 @@ export default function AddItem() {
       return;
     }
 
+    setIsLoading(true);
     try {
       const token = getAuthToken();
       if (!token) {
@@ -864,6 +1056,133 @@ export default function AddItem() {
       formData.append("size", size);
       formData.append("searchTag", searchTags.join(","));
 
+      // Add featured image if exists
+      if (image && image.originFileObj) {
+        formData.append("itemImage", image.originFileObj);
+      }
+
+      // Add multiple gallery images (up to 4)
+      galleryImageFiles.forEach((file, index) => {
+        if (file.originFileObj && index < 4) {
+          formData.append("uploadMultipleItemImages", file.originFileObj);
+        }
+      });
+
+      // Debug: Log the formData contents
+      console.log("FormData contents:");
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + ": " + pair[1]);
+      }
+
+      const response = await axios.post(
+        `${API_URL}/api/abid-jewelry-ms/createItem`,
+        formData,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Item created successfully!");
+        // Reset form
+        resetForm();
+        // Refresh the items list
+        fetchAllItems();
+      } else {
+        toast.error(response.data.message || "Failed to create item");
+      }
+    } catch (error) {
+      console.error("Error creating item:", error);
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(error.response.data.message || "Failed to create item");
+        }
+      } else {
+        toast.error("An unexpected error occurred while creating item");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Update the resetForm function to include gallery images
+  // const resetForm = () => {
+  //   setSelectedPrefix("");
+  //   setAutoGeneratedNumber("");
+  //   setBarcode("");
+  //   setUnitType("piece");
+  //   setProductFor([]);
+  //   setSelectedCategory("");
+  //   setSelectedCategoryId("");
+  //   setSelectedSubCategoryId("");
+  //   setSelectedStyleId(""); // ✅ Reset style ID
+  //   setGoldCategory("");
+  //   setSelectedGoldCategoryId(""); // ✅ Reset gold category ID
+  //   setDiamondWeight("");
+  //   setGoldWeight("");
+  //   setLength("");
+  //   setMm("");
+  //   setSize("");
+  //   setSearchTags([]);
+  //   setImage(null);
+  //   setStatus(null);
+  //   setGalleryImageFiles([]); // Reset gallery images
+  //   setProductForError(""); // Reset validation error
+  // };
+
+  const resetForm = () => {
+    setSelectedPrefix("");
+    setAutoGeneratedNumber("");
+    setBarcode("");
+    setUnitType("piece");
+    setProductFor([]);
+    setSelectedCategory("");
+    setSelectedCategoryId("");
+    setSelectedSubCategoryId("");
+    setSelectedStyleId("");
+    setGoldCategory("");
+    setSelectedGoldCategoryId("");
+    setDiamondWeight("");
+    setGoldWeight("");
+    setLength("");
+    setMm("");
+    setSize("");
+    setSearchTags([]);
+    setImage(null);
+    setStatus(null);
+    setGalleryImageFiles([]);
+    setProductForError("");
+
+    // Reset dropdown keys to force re-render with default values
+    setCategoryDropdownKey((prev) => prev + 1);
+    setSubCategoryDropdownKey((prev) => prev + 1);
+    setStyleDropdownKey((prev) => prev + 1);
+    setGoldCategoryDropdownKey((prev) => prev + 1);
+    setPrefixDropdownKey((prev) => prev + 1);
+  };
+
+  const handleCategoryIconClick = () => {
+    console.log("Category plus icon clicked");
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleSubCategoryIconClick = () => {
+    console.log("Sub-category plus icon clicked");
+    setIsSubCategoryModalOpen(true);
+  };
+  const handleStyleIconClick = () => {
+    console.log("Sub-category plus icon clicked");
+    setIsStyleModalOpen(true);
+  };
+  const handleGoldCategoryIconClick = () => {
+    console.log("Sub-category plus icon clicked");
+    setIsGoldCategoryModalOpen(true);
+  };
 
   return (
     <div className="w-full mx-auto px-3 py-6 sm:px-4 md:px-6 xl:px-8 xl:py-6">
@@ -888,7 +1207,7 @@ export default function AddItem() {
                   SKU<span className="text-red-500"> *</span>
                 </label>
                 <div className="flex items-center gap-3 w-full">
-                  <Dropdown
+                  {/* <Dropdown
                     defaultValue="Prefix"
                     options={skuPrefixes.map((prefix) => prefix.prefixName)}
                     className="w-full"
@@ -899,6 +1218,16 @@ export default function AddItem() {
                     noResultsMessage="No Prefix found"
                     // DropDownName="Manager"
                     // />
+                  /> */}
+
+                  <Dropdown
+                    key={prefixDropdownKey}
+                    defaultValue="Prefix"
+                    options={skuPrefixes.map((prefix) => prefix.prefixName)}
+                    className="w-full"
+                    onSelect={handlePrefixSelect}
+                    searchable={true}
+                    noResultsMessage="No Prefix found"
                   />
                   <span>-</span>
                   <div className="w-full">
@@ -972,13 +1301,13 @@ export default function AddItem() {
                   </div>
                 </div>
                 <Dropdown
+                  key={categoryDropdownKey}
                   defaultValue="Select Category"
                   options={categories}
                   className="w-full"
                   onSelect={handleCategorySelect}
                   searchable={true}
                   noResultsMessage="No category found"
-                  // DropDownName="Manager"
                 />
               </div>
 
@@ -988,7 +1317,7 @@ export default function AddItem() {
                     htmlFor="style"
                     className="block mb-1 text-[15px] font-medium"
                   >
-                    Style
+                    Style <span className="text-red-500"> *</span>
                   </label>
                   <div
                     className="cursor-pointer mb-1"
@@ -1003,10 +1332,11 @@ export default function AddItem() {
                   </div>
                 </div>
                 <Dropdown
+                  key={styleDropdownKey}
                   defaultValue="Select Style"
                   options={styles}
                   className="w-full"
-                  onSelect={handleStyleSelect} // ✅ This will now store both name and ID
+                  onSelect={handleStyleSelect}
                   searchable={true}
                   noResultsMessage="No Style found"
                 />
@@ -1076,7 +1406,222 @@ export default function AddItem() {
                       className="!w-[100%]"
                     />
                   </div>
-                
+                  <Button
+                    text="Add"
+                    className="w-[20%] border-gray-300"
+                    onClick={addSearchTag}
+                    type="button"
+                  />
+                </div>
+
+                {searchTags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {searchTags.map((tag, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 px-4 py-1 rounded-full bg-[#76767633] text-sm text-[#626262]"
+                      >
+                        <span>{tag}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeSearchTag(tag)}
+                          className="flex items-center justify-center w-4 h-4 rounded-full bg-[#626262]"
+                        >
+                          <X size={11} color="white" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Column */}
+            <div className="space-y-4">
+              <div>
+                <label
+                  htmlFor="barcode"
+                  className="block mb-1 text-[15px] font-medium"
+                >
+                  Barcode<span className="text-red-500"> *</span>
+                </label>
+                <div className="flex w-full items-center border border-gray-300 rounded-md overflow-hidden p-1">
+                  <input
+                    type="text"
+                    id="barcode"
+                    placeholder="eg: 23923"
+                    value={barcode}
+                    onChange={(e) => setBarcode(e.target.value)}
+                    className="w-full px-4 py-2 text-sm text-gray-700 placeholder-gray-400 border-none outline-none"
+                  />
+                  <Button
+                    text="Generate"
+                    onClick={generateBarcode}
+                    type="button"
+                    className="bg-[#28A745] text-white text-sm font-semibold px-4 py-2 hover:bg-green-600 transition-colors !border-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block mb-1 text-[15px] font-medium">
+                  Product For <span className="text-red-500"> *</span>
+                </label>
+                <div className="flex flex-wrap gap-4 mt-2">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="male"
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                      checked={productFor.includes("male")}
+                      onChange={(e) =>
+                        handleProductForChange("male", e.target.checked)
+                      }
+                    />
+                    <label htmlFor="male" className="font-normal">
+                      Male
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="female"
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                      checked={productFor.includes("female")}
+                      onChange={(e) =>
+                        handleProductForChange("female", e.target.checked)
+                      }
+                    />
+                    <label htmlFor="female" className="font-normal">
+                      Female
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="kids"
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                      checked={productFor.includes("kids")}
+                      onChange={(e) =>
+                        handleProductForChange("kids", e.target.checked)
+                      }
+                    />
+                    <label htmlFor="kids" className="font-normal">
+                      Kids
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="unisex"
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                      checked={productFor.includes("unisex")}
+                      onChange={(e) =>
+                        handleProductForChange("unisex", e.target.checked)
+                      }
+                    />
+                    <label htmlFor="unisex" className="font-normal">
+                      Unisex
+                    </label>
+                  </div>
+                </div>
+
+                {/* Display validation error for productFor */}
+                {productForError && (
+                  <p className="text-red-500 text-sm mt-1">{productForError}</p>
+                )}
+
+                <div className="flex flex-col mt-3.5">
+                  <div className="flex items-center gap-2">
+                    <label
+                      htmlFor="sub-category"
+                      className="block mb-1 text-[15px] font-medium"
+                    >
+                      Sub Category <span className="text-red-500"> *</span>
+                    </label>
+                    <div
+                      className="cursor-pointer mb-1"
+                      onClick={handleSubCategoryIconClick}
+                      style={{ display: "inline-block" }}
+                    >
+                      <img
+                        src={plusIcon || "/placeholder.svg"}
+                        alt="Add sub-category"
+                        width={16}
+                      />
+                    </div>
+                  </div>
+                  <Dropdown
+                    key={subCategoryDropdownKey}
+                    defaultValue="Select Sub Category"
+                    options={subCategories}
+                    className="w-full"
+                    onSelect={handleSubCategorySelect}
+                    searchable={true}
+                    noResultsMessage="No Sub category found"
+                  />
+                </div>
+
+                <div className="flex flex-col mt-3.5">
+                  <div className="flex items-center gap-2">
+                    <label
+                      htmlFor="gold-category"
+                      className="block mb-1 text-[15px] font-medium"
+                    >
+                      Gold Category <span className="text-red-500"> *</span>
+                    </label>
+                    <div
+                      className="cursor-pointer mb-1"
+                      onClick={handleGoldCategoryIconClick}
+                      style={{ display: "inline-block" }}
+                    >
+                      <img
+                        src={plusIcon || "/placeholder.svg"}
+                        alt="Add sub-category"
+                        width={16}
+                      />
+                    </div>
+                  </div>
+                  <Dropdown
+                    key={goldCategoryDropdownKey}
+                    defaultValue="Select Gold Category"
+                    options={goldCategories}
+                    className="w-full"
+                    onSelect={handleGoldCategorySelect}
+                    searchable={true}
+                    noResultsMessage="No Gold Category found"
+                  />
+                </div>
+
+                <div className="mt-3.5">
+                  <label
+                    htmlFor="gold-weight"
+                    className="block mb-1 text-[15px] font-medium"
+                  >
+                    Gold Weight{" "}
+                    <span className="text-sm text-gray-500">(grams)</span>
+                  </label>
+                  <Input
+                    placeholder="eg: 150 gms"
+                    className="w-full"
+                    value={goldWeight}
+                    onChange={(e) => setGoldWeight(e.target.value)}
+                  />
+                </div>
+
+                <div className="mt-3.5">
+                  <label
+                    htmlFor="mm"
+                    className="block mb-1 text-[15px] font-medium"
+                  >
+                    MM
+                  </label>
+                  <Input
+                    placeholder="eg: 8mm"
+                    className="w-full"
+                    value={mm}
+                    onChange={(e) => setMm(e.target.value)}
+                  />
                 </div>
 
                 <div className="w-full mt-3.5">
@@ -1168,9 +1713,12 @@ export default function AddItem() {
                   />
                   {canCreate && (
                     <Button
-                      text="Save"
+                      text={isLoading ? "Saving..." : "Save"}
+                      className={`px-6 !bg-[#056BB7] border-none text-white ${
+                        isLoading ? "opacity-70 cursor-not-allowed" : ""
+                      }`}
                       type="submit"
-                      className="px-6 !bg-[#056BB7] border-none text-white"
+                      disabled={isLoading}
                     />
                   )}
                 </div>
@@ -1185,6 +1733,22 @@ export default function AddItem() {
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       ) : (
+        // <ItemCategoryTable
+        //   allItem={true}
+        //   className=""
+        //   tableDataAlignment="zone"
+        //   columns={columns}
+        //   data={itemsData}
+        //   tableTitle="Item (Category)"
+        //   canUpdate={canUpdate}
+        //   canDelete={canDelete}
+        //   onEdit={(row: any) => setSelectedUser(row)}
+        //   onDelete={(row: any) => {
+        //     setSelectedUser(row);
+        //     setShowDeleteModal(true);
+        //   }}
+        // />
+
         <ItemCategoryTable
           allItem={true}
           className=""
@@ -1196,9 +1760,236 @@ export default function AddItem() {
           canDelete={canDelete}
           onEdit={(row: any) => setSelectedUser(row)}
           onDelete={handleDeleteItem} // ✅ Now properly connected to the delete function
+          AddItemCategoryButton={false}
         />
       )}
 
+      {/* Custom Add Category Modal */}
+      {isCategoryModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/20 z-50">
+          <div
+            ref={categoryModalRef}
+            className="animate-scaleIn bg-white rounded-xl w-full max-w-md relative shadow-lg border-3 border-gray-300"
+          >
+            <div className="p-6">
+              <h3 className="text-xl font-semibold text-[#056BB7] mb-4">
+                Add Product Category
+              </h3>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="newCategory"
+                    className="block text-[15px] font-medium"
+                  >
+                    Category
+                  </label>
+                  <Input
+                    placeholder="Earrings"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="flex justify-end">
+                  <Button
+                    text="Add Product Category"
+                    onClick={handleAddCategory}
+                    type="button"
+                    className="px-6 !bg-[#056BB7] border-none text-white"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Add Sub-Category Modal */}
+      {isSubCategoryModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/20 z-50">
+          <div
+            ref={subCategoryModalRef}
+            className="animate-scaleIn bg-white rounded-xl w-md md:w-2xl lg:w-3xl relative shadow-lg border-3 border-gray-300"
+          >
+            <div className="p-6">
+              <h3 className="text-xl font-semibold text-[#056BB7] mb-4">
+                Add Product Sub-Category
+              </h3>
+
+              <div className="space-y-4">
+                <div className="grid lg:grid-cols-2 gap-4">
+                  <div className="space-y-2 w-full">
+                    <label
+                      htmlFor="category"
+                      className="block text-[15px] font-medium"
+                    >
+                      Category
+                    </label>
+                    <div className="!w-full">
+                      <Dropdown
+                        defaultValue={"Select Category"}
+                        options={categories}
+                        className="w-full"
+                        onSelect={(value) => setSelectedCategory(value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="newSubCategory"
+                      className="block text-[15px] font-medium"
+                    >
+                      Sub-Category
+                    </label>
+                    <Input
+                      placeholder="Product For Field Name"
+                      value={newSubCategory}
+                      onChange={(e) => setNewSubCategory(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button
+                    text="Add Product Sub Category"
+                    onClick={handleAddSubCategory}
+                    type="button"
+                    className="px-6 !bg-[#056BB7] border-none text-white"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {isStyleModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/20 z-50">
+          <div
+            ref={styleModalRef}
+            className="animate-scaleIn bg-white rounded-xl w-md md:w-2xl lg:w-3xl relative shadow-lg border-3 border-gray-300"
+          >
+            <div className="p-6">
+              <h3 className="text-xl font-semibold text-[#056BB7] mb-4">
+                Add Style
+              </h3>
+
+              <div className="space-y-4">
+                <div className="grid lg:grid-cols-1 gap-4">
+                  <div className="space-y-2 w-full">
+                    <label
+                      htmlFor="category"
+                      className="block text-[15px] font-medium"
+                    >
+                      Style
+                    </label>
+                    <div className="!w-full">
+                      <Input
+                        placeholder="Enter Style"
+                        value={newStyle}
+                        onChange={(e) => setNewStyle(e.target.value)}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="newSubCategory"
+                      className="block text-[15px] font-medium"
+                    >
+                      Description
+                    </label>
+
+                    <textarea
+                      value={newStyleDescription}
+                      onChange={(e) => setNewStyleDescription(e.target.value)}
+                      placeholder="Style description"
+                      rows={4}
+                      className="Poppins-font font-medium w-full px-4 py-2 border border-gray-300 rounded-md text-sm !focus:outline-none outline-none resize-none"
+                    ></textarea>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button
+                    text="Add Style"
+                    onClick={handleAddStyle}
+                    type="button"
+                    className="px-6 !bg-[#056BB7] border-none text-white"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {isGoldCategoryModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/20 z-50">
+          <div
+            ref={goldCategoryModalRef}
+            className="animate-scaleIn bg-white rounded-xl w-md md:w-2xl lg:w-3xl relative shadow-lg border-3 border-gray-300"
+          >
+            <div className="p-6">
+              <h3 className="text-xl font-semibold text-[#056BB7] mb-4">
+                Add Gold Category
+              </h3>
+
+              <div className="space-y-4">
+                <div className="grid lg:grid-cols-1 gap-4">
+                  <div className="space-y-2 w-full">
+                    <label
+                      htmlFor="category"
+                      className="block text-[15px] font-medium"
+                    >
+                      Gold Category
+                    </label>
+                    <div className="!w-full">
+                      <Input
+                        placeholder="Enter Gold Category" // ✅ Correct placeholder
+                        value={newGoldCategory} // ✅ Correct state variable
+                        onChange={(e) => setNewGoldCategory(e.target.value)} // ✅ Correct setter
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="newSubCategory"
+                      className="block text-[15px] font-medium"
+                    >
+                      Description
+                    </label>
+
+                    <textarea
+                      value={newGoldCategoryDescription} // ✅ Correct state variable
+                      onChange={(e) =>
+                        setNewGoldCategoryDescription(e.target.value)
+                      } // ✅ Correct setter
+                      placeholder="Gold Category description"
+                      rows={4}
+                      className="Poppins-font font-medium w-full px-4 py-2 border border-gray-300 rounded-md text-sm !focus:outline-none outline-none resize-none"
+                    ></textarea>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button
+                    text="Add Gold Category"
+                    onClick={handleAddGoldCategory}
+                    type="button"
+                    className="px-6 !bg-[#056BB7] border-none text-white"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

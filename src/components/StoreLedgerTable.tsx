@@ -9,6 +9,11 @@ import { useNavigate } from "react-router-dom";
 import { DatePicker } from "antd";
 import InvoiceDetailModal from "../../src/pages/dashboard/Inventory/InvoiceDetailModal";
 type ColumnType = "text" | "image" | "status" | "actions" | "button" | "custom";
+import dayjs from "dayjs";
+import isBetween from "dayjs/plugin/isBetween";
+
+// Enable the isBetween plugin
+dayjs.extend(isBetween);
 
 interface Column {
   header: string;
@@ -60,7 +65,7 @@ const StoreLedgerTable: React.FC<StoreLedgerTableProps> = ({
   dealBy,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [invoiceDetail, setInvoiceDetail] = useState<any>(null); // for modal
   const [deleteUser, setDeleteUser] = useState<any>(null); // for modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -71,11 +76,30 @@ const StoreLedgerTable: React.FC<StoreLedgerTableProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editingRow, setEditingRow] = useState<any>(null);
   const [formData, setFormData] = useState<any>(null);
-  const [dateRange, setDateRange] = useState("");
+  // const [dateRange, setDateRange] = useState("");
   const [supplier, setSupplier] = useState("");
   const [isOpen, setIsOpen] = React.useState(false);
+  const [dateRange, setDateRange] = useState<
+    [dayjs.Dayjs | null, dayjs.Dayjs | null] | null
+  >(null);
 
   const navigate = useNavigate();
+  // const filteredData = data.filter((item) => {
+  //   // Create a version of the item without the status field for searching
+  //   const searchableItem = { ...item };
+  //   delete searchableItem.status;
+
+  //   const matchesSearch = Object.values(searchableItem)
+  //     .join(" ")
+  //     .toLowerCase()
+  //     .includes(search.toLowerCase());
+
+  //   const matchesStatus =
+  //     statusFilter === "All" || item.status === statusFilter;
+
+  //   return matchesSearch && matchesStatus;
+  // });
+
   const filteredData = data.filter((item) => {
     // Create a version of the item without the status field for searching
     const searchableItem = { ...item };
@@ -89,7 +113,16 @@ const StoreLedgerTable: React.FC<StoreLedgerTableProps> = ({
     const matchesStatus =
       statusFilter === "All" || item.status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    // Date filtering
+    let matchesDate = true;
+    if (dateRange && dateRange[0] && dateRange[1]) {
+      const itemDate = dayjs(item.date, "M/D/YYYY");
+      const startDate = dateRange[0].startOf("day");
+      const endDate = dateRange[1].endOf("day");
+      matchesDate = itemDate.isBetween(startDate, endDate, null, "[]");
+    }
+
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   const totalPages = Math.ceil(filteredData.length / rowsPerPage);
@@ -97,12 +130,15 @@ const StoreLedgerTable: React.FC<StoreLedgerTableProps> = ({
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage
   );
+  console.log("current data", currentData);
 
   const handleChangePage = (page: number) => {
     if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
-  // console.log("DATA", isEditing);
-
+  // console.log("DATA", data);
+  // data?.date?.forEach((dateItem: any, index: number) => {
+  //   console.log(`Date ${index + 1}:`, dateItem);
+  // });
   const { RangePicker } = DatePicker;
   const onClose = () => setIsOpen(false);
   useEffect(() => {
@@ -143,15 +179,14 @@ const StoreLedgerTable: React.FC<StoreLedgerTableProps> = ({
     { header: "RATE ($)", accessor: "rate" },
     { header: "AMOUNT ($)", accessor: "amount" },
   ];
+  // console.log("PurchaseInvoiceData", PurchaseInvoiceData);
   return (
     <>
       <div
         className={`bg-white rounded-xl px-4 py-7 flex flex-col gap-4 overflow-hidden shadow-md ${className}`}
       >
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-[#056BB7]">
-            Store Ledger
-          </h2>
+          <h2 className="text-xl font-semibold text-[#056BB7]">Store Ledger</h2>
           <Button
             text="Export"
             variant="border"
@@ -160,11 +195,21 @@ const StoreLedgerTable: React.FC<StoreLedgerTableProps> = ({
         </div>
         {/* Filters */}
         <div className="flex justify-between gap-4 items-center">
-          <RangePicker className="h-10 !text-gray-400 !border-gray-300" />
+          {/* <RangePicker className="h-10 !text-gray-400 !border-gray-300" /> */}
+
+          <RangePicker
+            className="h-10 !text-gray-400 !border-gray-300"
+            value={dateRange}
+            onChange={(dates) => {
+              setDateRange(dates);
+              setCurrentPage(1);
+            }}
+            format="M/D/YYYY"
+          />
 
           <div className="flex justify-start xl:justify-end md:col-span-4 gap-4 lg:col-span-1 w-full">
             <Input
-              placeholder="Search by store, Description"
+              placeholder="Search by store name"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-sm !rounded-3xl"
@@ -225,14 +270,32 @@ const StoreLedgerTable: React.FC<StoreLedgerTableProps> = ({
                               : "justify-center"
                           }`}
                         >
-                          {col.accessor === "actions" ? (
+                          {/* {col.accessor === "actions" ? (
                             <LuEye
                               className="cursor-pointer"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 console.log("gfgdgfd");
 
-                                navigate(`${row.store}`);
+                                navigate(`${row?.storeId}`);
+                              }}
+                            />
+                          ) : (
+                            // @ts-ignore
+                            row[col.accessor]
+                          )} */}
+
+                          {col.accessor === "actions" ? (
+                            <LuEye
+                              className="cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Use onRowClick if available, otherwise fallback to storeId
+                                if (onRowClick) {
+                                  onRowClick(row);
+                                } else {
+                                  navigate(`${row?.storeId}`);
+                                }
                               }}
                             />
                           ) : (
@@ -267,20 +330,38 @@ const StoreLedgerTable: React.FC<StoreLedgerTableProps> = ({
               <button
                 onClick={() => handleChangePage(currentPage - 1)}
                 className="w-10 h-10 rounded-full border border-gray-300 hover:bg-gray-200 flex items-center justify-center"
+                disabled={currentPage === 1}
               >
                 <GoChevronLeft size={18} />
               </button>
 
-              {[1, 2, 3, 10].map((num, idx) => (
-                <React.Fragment key={num}>
-                  {idx === 3 && (
-                    <div>
-                      <span className="text-gray-500 px-0.5">•</span>
-                      <span className="text-gray-500 px-0.5">•</span>
-                      <span className="text-gray-500 px-0.5">•</span>
-                    </div>
-                  )}
+              {/* Always show page 1 */}
+              <button
+                onClick={() => handleChangePage(1)}
+                className={`w-8 h-8 rounded-full text-sm flex items-center justify-center transition ${
+                  currentPage === 1
+                    ? "bg-[#407BFF] text-white"
+                    : "bg-[#E5E7EB] text-black hover:bg-[#407BFF] hover:text-white"
+                }`}
+              >
+                1
+              </button>
+
+              {/* Show dots if current page is far from start */}
+              {currentPage > 3 && (
+                <div>
+                  <span className="text-gray-500 px-0.5">•</span>
+                  <span className="text-gray-500 px-0.5">•</span>
+                  <span className="text-gray-500 px-0.5">•</span>
+                </div>
+              )}
+
+              {/* Show current page and surrounding pages (but not 1 or last page) */}
+              {[currentPage - 1, currentPage, currentPage + 1]
+                .filter((page) => page > 1 && page < totalPages && page >= 1)
+                .map((num) => (
                   <button
+                    key={num}
                     onClick={() => handleChangePage(num)}
                     className={`w-8 h-8 rounded-full text-sm flex items-center justify-center transition ${
                       currentPage === num
@@ -290,12 +371,35 @@ const StoreLedgerTable: React.FC<StoreLedgerTableProps> = ({
                   >
                     {num}
                   </button>
-                </React.Fragment>
-              ))}
+                ))}
+
+              {/* Show dots if current page is far from end */}
+              {currentPage < totalPages - 2 && totalPages > 1 && (
+                <div>
+                  <span className="text-gray-500 px-0.5">•</span>
+                  <span className="text-gray-500 px-0.5">•</span>
+                  <span className="text-gray-500 px-0.5">•</span>
+                </div>
+              )}
+
+              {/* Always show last page (if more than 1 page) */}
+              {totalPages > 1 && (
+                <button
+                  onClick={() => handleChangePage(totalPages)}
+                  className={`w-8 h-8 rounded-full text-sm flex items-center justify-center transition ${
+                    currentPage === totalPages
+                      ? "bg-[#407BFF] text-white"
+                      : "bg-[#E5E7EB] text-black hover:bg-[#407BFF] hover:text-white"
+                  }`}
+                >
+                  {totalPages}
+                </button>
+              )}
 
               <button
                 onClick={() => handleChangePage(currentPage + 1)}
                 className="w-10 h-10 rounded-full border border-gray-300 hover:bg-gray-200 flex items-center justify-center"
+                disabled={currentPage === totalPages}
               >
                 <GoChevronRight size={18} />
               </button>
@@ -304,10 +408,15 @@ const StoreLedgerTable: React.FC<StoreLedgerTableProps> = ({
             <div className="flex items-center gap-2 mt-2 md:mt-0">
               <span className="text-sm">Show:</span>
               <Dropdown
-                options={["5 Row", "10 Row", "15 Row", "20 Row"]}
+                options={["10 Row", "15 Row", "20 Row", "25 Row", "All"]}
+                defaultValue="10 Row"
                 onSelect={(val) => {
-                  const selected = parseInt(val.split(" ")[0]);
-                  setRowsPerPage(selected);
+                  if (val === "All") {
+                    setRowsPerPage(filteredData.length || data.length);
+                  } else {
+                    const selected = Number.parseInt(val.split(" ")[0]);
+                    setRowsPerPage(selected);
+                  }
                   setCurrentPage(1);
                 }}
                 className="bg-black text-white rounded px-2 py-1 min-w-[90px]"
@@ -327,6 +436,19 @@ const StoreLedgerTable: React.FC<StoreLedgerTableProps> = ({
           }}
           columns={PurchaseInvoiceDetail}
           data={PurchaseInvoiceData}
+
+          //  data={PurchaseInvoiceDetail?.map((item) => ({
+          //     productName: item.itemBarcode?.barcode || "N/A",
+          //     quantity: item.quantity,
+          //     costPrice: item.costPrice,
+          //     totalPriceOfCostItems: item.totalPriceOfCostItems,
+          //     userImage: item.itemBarcode?.itemImage
+          //       ? `${
+          //           import.meta.env.VITE_BASE_URL ||
+          //           "http://192.168.100.18:9000"
+          //         }${item.itemBarcode.itemImage}`
+          //       : null,
+          //   }))}
         />
       )}
 

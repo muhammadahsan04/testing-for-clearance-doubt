@@ -12,7 +12,6 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { hasPermission } from "../sections/CoreSettings";
 
-
 const API_URL = import.meta.env.VITE_BASE_URL || "http://192.168.100.254:9000";
 
 interface Column {
@@ -118,12 +117,6 @@ const PurchaseOrder: React.FC = () => {
     string[]
   >([]);
 
-  const userRole = getUserRole();
-  const isAdmin = userRole === "Admin" || userRole === "SuperAdmin";
-  const canCreate = isAdmin || hasPermission("Inventory", "create");
-  const canUpdate = isAdmin || hasPermission("Inventory", "update");
-  const canDelete = isAdmin || hasPermission("Inventory", "delete");
-
   const [editFormData, setEditFormData] = useState({
     supplierCompanyName: "",
     category: [] as string[],
@@ -147,6 +140,19 @@ const PurchaseOrder: React.FC = () => {
     remarks: "",
   });
 
+  const userRole = getUserRole();
+  const isAdmin = userRole === "Admin" || userRole === "SuperAdmin";
+  const canCreate = isAdmin || hasPermission("Inventory", "create");
+  const canUpdate = isAdmin || hasPermission("Inventory", "update");
+  const canDelete = isAdmin || hasPermission("Inventory", "delete");
+
+  // useEffect(() => {
+  //   console.log('canCreate', canCreate);
+
+  //   if (!canCreate) {
+  //     toast.error("You don't have permission to create product sub-category");
+  //   }
+  // }, [canCreate]);
   // Form states
   const [formData, setFormData] = useState({
     supplierCompanyName: "",
@@ -527,6 +533,57 @@ const PurchaseOrder: React.FC = () => {
     }
   };
 
+  const handleEditClick = async (row: any) => {
+    const purchaseOrderData = await fetchSinglePurchaseOrder(row._id);
+    if (purchaseOrderData) {
+      // console.log("subCategory", purchaseOrderData);
+      // console.log(
+      //   "purchaseOrderData.category?.name",
+      //   purchaseOrderData.category?.name,
+      //   purchaseOrderData.goldCategory.name
+      // );
+
+      setCurrentPurchaseOrderData(purchaseOrderData);
+      setEditingRow(row);
+
+      // Populate EDIT form data with API response (not main form)
+      setEditFormData({
+        supplierCompanyName:
+          purchaseOrderData.supplierCompanyName?.companyName || "",
+        category: purchaseOrderData.category?._id,
+        subCategory: purchaseOrderData?.subCategory?._id,
+        productDetails: purchaseOrderData.productDetails || "",
+        goldCategory: purchaseOrderData.goldCategory._id || "",
+        diamondWeight: purchaseOrderData.diamondWeight || "",
+        diamondPricePerPc:
+          purchaseOrderData.diamondPricePerPc?.toString() || "",
+        diamondValue: purchaseOrderData.diamondValue || "",
+        goldWeight: purchaseOrderData.goldWeight || "",
+        goldPricePerPc: purchaseOrderData.goldPricePerPc?.toString() || "",
+        goldValue: purchaseOrderData.goldValue || "",
+        length: purchaseOrderData.length || "",
+        mm: purchaseOrderData.mm || "",
+        size: purchaseOrderData.size || "",
+        dateOfDelivery: purchaseOrderData.dateOfDelivery
+          ? new Date(purchaseOrderData.dateOfDelivery)
+            .toISOString()
+            .split("T")[0]
+          : "",
+        quantity: purchaseOrderData.quantity?.toString() || "",
+        costPrice: purchaseOrderData.costPrice?.toString() || "",
+        serviceCharge: purchaseOrderData.serviceCharge?.toString() || "",
+        grossPrice: purchaseOrderData.grossPrice?.toString() || "",
+        remarks: purchaseOrderData.remarks || "",
+      });
+
+      // Set selected names for display
+      setSelectedCategoryNames(purchaseOrderData.category?.name || "");
+      setSelectedSubCategoryNames(purchaseOrderData.subCategory?.name || "");
+
+      setIsEditing(true);
+    }
+  };
+
   // Handle view button click
   const handleViewClick = async (row: any) => {
     const purchaseOrderData = await fetchSinglePurchaseOrder(row._id);
@@ -573,6 +630,159 @@ const PurchaseOrder: React.FC = () => {
     }
   };
 
+  // Remove a selected category
+  const removeCategory = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      category: prev.category.filter((_, i) => i !== index),
+    }));
+    setSelectedCategoryNames((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Remove a selected subcategory
+  const removeSubCategory = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      subCategory: prev.subCategory.filter((_, i) => i !== index),
+    }));
+    setSelectedSubCategoryNames((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Handle form input changes
+  const handleInputChange = (field: string, value: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+
+    // Auto-calculate values
+    if (field === "diamondWeight" || field === "diamondPricePerPc") {
+      const weight =
+        field === "diamondWeight"
+          ? Number.parseFloat(value) || 0
+          : Number.parseFloat(formData.diamondWeight) || 0;
+      const price =
+        field === "diamondPricePerPc"
+          ? Number.parseFloat(value) || 0
+          : Number.parseFloat(formData.diamondPricePerPc) || 0;
+      setFormData((prev) => ({
+        ...prev,
+        diamondValue: (weight * price).toString(),
+      }));
+    }
+
+    if (field === "goldWeight" || field === "goldPricePerPc") {
+      const weight =
+        field === "goldWeight"
+          ? Number.parseFloat(value) || 0
+          : Number.parseFloat(formData.goldWeight) || 0;
+      const price =
+        field === "goldPricePerPc"
+          ? Number.parseFloat(value) || 0
+          : Number.parseFloat(formData.goldPricePerPc) || 0;
+      setFormData((prev) => ({
+        ...prev,
+        goldValue: (weight * price).toString(),
+      }));
+    }
+
+    if (field === "costPrice" || field === "serviceCharge") {
+      const cost =
+        field === "costPrice"
+          ? Number.parseFloat(value) || 0
+          : Number.parseFloat(formData.costPrice) || 0;
+      const service =
+        field === "serviceCharge"
+          ? Number.parseFloat(value) || 0
+          : Number.parseFloat(formData.serviceCharge) || 0;
+      setFormData((prev) => ({
+        ...prev,
+        grossPrice: (cost + service).toString(),
+      }));
+    }
+  };
+
+  // Create purchase order
+  const createPurchaseOrder = async () => {
+    try {
+      setLoading(true);
+      const token = getAuthToken();
+
+      const selectedSupplier = suppliers.find(
+        (supplier) => supplier.companyName === formData.supplierCompanyName
+      );
+
+      const purchaseOrderFormData = {
+        supplierCompanyName: selectedSupplier?._id || "",
+        category: formData.category,
+        subCategory: formData.subCategory,
+        productDetails: formData.productDetails,
+        goldCategory: selectedGoldCategoryId,
+        diamondWeight: formData.diamondWeight,
+        diamondPricePerPc: Number.parseFloat(formData.diamondPricePerPc) || 0,
+        diamondValue: formData.diamondValue,
+        goldWeight: formData.goldWeight,
+        goldPricePerPc: Number.parseFloat(formData.goldPricePerPc) || 0,
+        goldValue: formData.goldValue,
+        length: formData.length,
+        mm: formData.mm,
+        size: formData.size,
+        dateOfDelivery: formData.dateOfDelivery,
+        quantity: Number.parseInt(formData.quantity) || 0,
+        costPrice: Number.parseFloat(formData.costPrice) || 0,
+        serviceCharge: Number.parseFloat(formData.serviceCharge) || 0,
+        grossPrice: Number.parseFloat(formData.grossPrice) || 0,
+        remarks: formData.remarks,
+      };
+
+      const response = await axios.post(
+        `${API_URL}/api/abid-jewelry-ms/createPurchaseOrder`,
+        purchaseOrderFormData,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Purchase order created successfully!");
+        // Reset form
+        setFormData({
+          supplierCompanyName: "",
+          category: [],
+          subCategory: [],
+          productDetails: "",
+          goldCategory: "",
+          diamondWeight: "",
+          diamondPricePerPc: "",
+          diamondValue: "",
+          goldWeight: "",
+          goldPricePerPc: "",
+          goldValue: "",
+          length: "",
+          mm: "",
+          size: "",
+          dateOfDelivery: "",
+          quantity: "",
+          costPrice: "",
+          serviceCharge: "",
+          grossPrice: "",
+          remarks: "",
+        });
+        setSelectedCategoryNames([]);
+        setSelectedSubCategoryNames([]);
+        fetchPurchaseOrders();
+      }
+    } catch (error) {
+      console.error("Error creating purchase order:", error);
+      toast.error("Failed to create purchase order");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const featuredProps: UploadProps = {
     name: "file",
     action: "https://660d2bd96ddfa2943b33731c.mockapi.io/api/upload",
@@ -591,6 +801,32 @@ const PurchaseOrder: React.FC = () => {
         setImage(file);
         setStatus("error");
       }
+    },
+  };
+
+  const handleRemove = () => {
+    setImage(null);
+    setStatus(null);
+  };
+
+  const { Dragger } = Upload;
+  const props: UploadProps = {
+    name: "file",
+    multiple: true,
+    action: "https://660d2bd96ddfa2943b33731c.mockapi.io/api/upload",
+    onChange(info) {
+      const { status } = info.file;
+      if (status !== "uploading") {
+        console.log(info.file, info.fileList);
+      }
+      if (status === "done") {
+        toast.success(`${info.file.name} file uploaded successfully.`);
+      } else if (status === "error") {
+        toast.error(`${info.file.name} file upload failed.`);
+      }
+    },
+    onDrop(e) {
+      console.log("Dropped files", e.dataTransfer.files);
     },
   };
 
@@ -637,6 +873,213 @@ const PurchaseOrder: React.FC = () => {
               Purchase Order
             </p>
             <div className="mt-6 mb-4 grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 lg:gap-16 xl:gap-32 text-[15px] Poppins-font font-medium">
+              {/* Left Side */}
+              <div className="space-y-4">
+                <div className="flex flex-col">
+                  <label htmlFor="" className="mb-1">
+                    Supplier Company Name<span className="text-red-500">*</span>
+                  </label>
+                  <Dropdown
+                    defaultValue="Select Supplier Company Name"
+                    onSelect={(value) =>
+                      handleInputChange("supplierCompanyName", value)
+                    }
+                    options={suppliers.map((supplier) => supplier.companyName)}
+                    className="w-full"
+                    noResultsMessage="No supplier found"
+                    searchable={true}
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label htmlFor="" className="mb-1">
+                    Product Details <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    placeholder="Diamond Chains"
+                    value={formData.productDetails}
+                    onChange={(e) =>
+                      handleInputChange("productDetails", e.target.value)
+                    }
+                    className="outline-none focus:outline-none w-full"
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label htmlFor="" className="mb-1">
+                    Category <span className="text-red-500">*</span>
+                  </label>
+                  <Dropdown
+                    defaultValue="Select Category"
+                    onSelect={(value) => {
+                      const selectedCategory = categories.find(
+                        (cat) => cat.name === value
+                      );
+                      if (selectedCategory) {
+                        handleInputChange("category", selectedCategory._id);
+                        setSelectedCategoryNames([selectedCategory.name]);
+                      }
+                    }}
+                    options={categories.map((category) => category.name)}
+                    className="w-full"
+                    noResultsMessage="No Category found"
+                    searchable={true}
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label htmlFor="" className="mb-1">
+                    Sub Category <span className="text-red-500">*</span>
+                  </label>
+                  <Dropdown
+                    defaultValue="Select Sub Category"
+                    onSelect={(value) => {
+                      const selectedSubCategory = subCategories.find(
+                        (subCat) => subCat.name === value
+                      );
+                      if (selectedSubCategory) {
+                        handleInputChange(
+                          "subCategory",
+                          selectedSubCategory._id
+                        );
+                        setSelectedSubCategoryNames([selectedSubCategory.name]);
+                      }
+                    }}
+                    options={subCategories.map(
+                      (subCategory) => subCategory.name
+                    )}
+                    className="w-full"
+                    noResultsMessage="No Sub Cateory found"
+                    searchable={true}
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label htmlFor="" className="mb-1">
+                    Gold Category <span className="text-red-500">*</span>
+                  </label>
+
+                  <Dropdown
+                    key={goldCategoryDropdownKey}
+                    defaultValue="Select Gold Category"
+                    options={goldCategories}
+                    className="w-full"
+                    onSelect={(value) => {
+                      const selectedGoldCategoryObj = goldCategoryData.find(
+                        (goldCat) => goldCat.name === value
+                      );
+                      if (selectedGoldCategoryObj) {
+                        handleInputChange(
+                          "goldCategory",
+                          selectedGoldCategoryObj._id
+                        ); // Send ID to formData
+                        setGoldCategory(value); // Keep name for display
+                        setSelectedGoldCategoryId(selectedGoldCategoryObj._id);
+                      }
+                    }}
+                    searchable={true}
+                    noResultsMessage="No Gold Category found"
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label htmlFor="" className="mb-1">
+                    Diamond Weight
+                  </label>
+                  <Input
+                    placeholder="4.5"
+                    value={formData.diamondWeight}
+                    onChange={(e) =>
+                      handleInputChange("diamondWeight", e.target.value)
+                    }
+                    className="outline-none focus:outline-none w-full"
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label htmlFor="" className="mb-1">
+                    Diamond Price/PC
+                  </label>
+                  <Input
+                    placeholder="150"
+                    type="number"
+                    value={formData.diamondPricePerPc}
+                    onChange={(e) =>
+                      handleInputChange("diamondPricePerPc", e.target.value)
+                    }
+                    className="outline-none focus:outline-none w-full"
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label htmlFor="" className="mb-1">
+                    Diamond Value
+                  </label>
+                  <Input
+                    placeholder="Auto-generate"
+                    type="number"
+                    value={formData.diamondValue}
+                    className="outline-none focus:outline-none w-full bg-gray-100"
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label htmlFor="" className="mb-1">
+                    Gold Weight{" "}
+                    <span className="text-[12px] text-gray-500">(grams)</span>
+                  </label>
+                  <Input
+                    placeholder="eg: 50gms"
+                    value={formData.goldWeight}
+                    onChange={(e) =>
+                      handleInputChange("goldWeight", e.target.value)
+                    }
+                    className="outline-none focus:outline-none w-full"
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label htmlFor="" className="mb-1">
+                    Gold Price/PC
+                  </label>
+                  <Input
+                    placeholder="150"
+                    type="number"
+                    value={formData.goldPricePerPc}
+                    onChange={(e) =>
+                      handleInputChange("goldPricePerPc", e.target.value)
+                    }
+                    className="outline-none focus:outline-none w-full"
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label htmlFor="" className="mb-1">
+                    Gold Value
+                  </label>
+                  <Input
+                    placeholder="Auto-generate"
+                    type="number"
+                    value={formData.goldValue}
+                    className="outline-none focus:outline-none w-full bg-gray-100"
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label htmlFor="" className="mb-1">
+                    Length
+                  </label>
+                  <Input
+                    placeholder='eg: 18"'
+                    value={formData.length}
+                    onChange={(e) =>
+                      handleInputChange("length", e.target.value)
+                    }
+                    className="outline-none focus:outline-none w-full"
+                  />
+                </div>
+              </div>
+
               {/* Right Side */}
               <div className="space-y-4">
                 <div className="flex flex-col">
@@ -664,7 +1107,9 @@ const PurchaseOrder: React.FC = () => {
                 </div>
 
                 <div className="flex flex-col w-full">
-                  <label className="mb-1">Date of Delivery</label>
+                  <label className="mb-1">
+                    Date of Delivery <span className="text-red-500">*</span>
+                  </label>
                   <DatePicker
                     value={formData.dateOfDelivery}
                     onChange={(e) =>
@@ -677,7 +1122,7 @@ const PurchaseOrder: React.FC = () => {
 
                 <div className="flex flex-col">
                   <label htmlFor="" className="mb-1">
-                    Quantity
+                    Quantity <span className="text-red-500">*</span>
                   </label>
                   <Input
                     placeholder="eg: 5"
@@ -760,6 +1205,7 @@ const PurchaseOrder: React.FC = () => {
     disabled:!bg-[#056ab7d2]
     disabled:cursor-not-allowed
   "
+                  />
 
                 </div>
               </div>
@@ -800,10 +1246,9 @@ const PurchaseOrder: React.FC = () => {
         loading={loading}
         // goldCategories={goldCategories}
         goldCategoryData={goldCategoryData}
-      // goldCategoryData={goldCategoryData}
-      />
-      canUpdate={canUpdate}
-      canDelete={canDelete}
+        // goldCategoryData={goldCategoryData}
+        canUpdate={canUpdate}
+        canDelete={canDelete}
       />
     </div>
   );

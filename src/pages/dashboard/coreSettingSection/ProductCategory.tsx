@@ -41,6 +41,7 @@ const getUserRole = () => {
 
 const ProductCategory: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
   const [category, setCategory] = useState("");
@@ -68,13 +69,150 @@ const ProductCategory: React.FC = () => {
   useEffect(() => {
     fetchCategories();
   }, []);
-  // Existing useEffect کے بعد یہ نیا useEffect add کریں
+  // Existing useEffect
   useEffect(() => {
     if (!canCreate) {
       toast.error("You don't have permission to create product category");
     }
   }, [canCreate]);
   // Fetch all categories
+  const fetchCategories = async () => {
+    setLoading(true);
+    try {
+      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+      const token = getAuthToken();
+
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+
+      const response = await axios.get(
+        `${API_URL}/api/abid-jewelry-ms/getAllCategory`,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        // Transform the data to match the expected format
+        const formattedData = response.data.data.map(
+          (cat: any, index: number) => ({
+            _id: cat._id,
+            sno: (index + 1).toString().padStart(2, "0"),
+            category: cat.name,
+            name: cat.name,
+            description: cat.description || "",
+          })
+        );
+
+        setCategoryData(formattedData);
+      } else {
+        toast.error(response.data.message || "Failed to fetch categories");
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(
+            error.response.data.message || "Failed to fetch categories"
+          );
+        }
+      } else {
+        toast.error("An unexpected error occurred while fetching categories");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const slugify = (text: string) => {
+    return text
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^\w-]+/g, "");
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!canCreate) {
+      toast.error("You don't have permission to create product category");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!category.trim()) {
+      toast.error("Category name is required");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+      const token = getAuthToken();
+
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+
+      const payload = {
+        name: category,
+        description: categoryDescription,
+      };
+
+      const response = await axios.post(
+        `${API_URL}/api/abid-jewelry-ms/addCategory`,
+        payload,
+        {
+          headers: {
+            "x-access-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Category added successfully!");
+
+        // Reset form fields
+        setCategory("");
+        setCategoryDescription("");
+
+        // Refresh categories list
+        fetchCategories();
+      } else {
+        toast.error(response.data.message || "Failed to add category");
+      }
+    } catch (error) {
+      console.error("Error adding category:", error);
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(error.response.data.message || "Failed to add category");
+        }
+      } else {
+        toast.error("An unexpected error occurred while adding category");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCategoryDescriptionChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
+    if (e.target.value.length <= charLimit) {
+      setCategoryDescription(e.target.value);
+    }
+  };
 
   // Handle category update
   const handleUpdateCategory = async (updatedCategory: CategoryData) => {
@@ -142,12 +280,15 @@ const ProductCategory: React.FC = () => {
           className="mt-4 text-[15px] Poppins-font font-medium w-full"
         >
           <div className="flex flex-col mb-2">
-            <label className="mb-1 text-black">Category</label>
+            <label className="mb-1 text-black">
+              Category <span className="text-red-500"> *</span>
+            </label>
             <Input
               placeholder="Product Category Name"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               className="outline-none focus:outline-none w-full"
+              // required
             />
           </div>
           <div className="flex flex-col mb-5">
@@ -168,9 +309,12 @@ const ProductCategory: React.FC = () => {
           <div className="flex justify-end items-end font-medium gap-4">
             {canCreate && (
               <Button
-                text="Add"
+                text={isLoading ? "Saving..." : "Save"}
+                className={`px-6 !bg-[#056BB7] border-none text-white ${
+                  isLoading ? "opacity-70 cursor-not-allowed" : ""
+                }`}
                 type="submit"
-                className="px-6 !bg-[#056BB7] border-none text-white"
+                disabled={isLoading}
               />
             )}
           </div>

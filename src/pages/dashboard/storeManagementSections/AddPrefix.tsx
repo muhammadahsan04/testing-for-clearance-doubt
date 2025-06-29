@@ -7,7 +7,6 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { hasPermission } from "../sections/CoreSettings";
 
-
 interface Column {
   header: string;
   accessor: string;
@@ -116,6 +115,174 @@ const AddPrefix: React.FC = () => {
     }
   };
 
+  // Function to add a new prefix
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!prefix.trim()) {
+      toast.error("Prefix name is required");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+      const token = getAuthToken();
+
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await axios({
+        method: "POST",
+        url: `${API_URL}/api/abid-jewelry-ms/storePrefix`,
+        data: { prefixName: prefix },
+        headers: {
+          "x-access-token": token,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = response.data;
+
+      if (data.success) {
+        toast.success("Prefix added successfully");
+        setPrefix(""); // Clear the input field
+        fetchPrefixes(); // Refresh the list
+      } else {
+        toast.error(data.message || "Failed to add prefix");
+      }
+    } catch (error) {
+      console.error("Error adding prefix:", error);
+
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(error.response.data.message || "Failed to add prefix");
+        }
+      } else {
+        toast.error("An unexpected error occurred while adding the prefix");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Function to handle edit action from ZoneTable
+  // const handleEditPrefix = async (row: any) => {
+  //   try {
+  //     const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+  //     const token = getAuthToken();
+
+  //     if (!token) {
+  //       toast.error("Authentication token not found. Please login again.");
+  //       return;
+  //     }
+
+  //     // First, fetch the current prefix details
+  //     const response = await axios.get(
+  //       `${API_URL}/api/abid-jewelry-ms/getOneStorePrefix/${row.id}`,
+  //       {
+  //         headers: {
+  //           "x-access-token": token,
+  //           "Content-Type": "application/json",
+  //         },
+  //       }
+  //     );
+
+  //     const data = response.data;
+
+  //     if (data.success && data.data) {
+
+  //       console.log('1');
+
+  //       // Update the prefix with the new data from the form
+  //       const updateResponse = await axios({
+  //         method: "PUT",
+  //         url: `${API_URL}/api/abid-jewelry-ms/updateStorePrefix/${row.id}`,
+  //         data: {
+  //           prefixName: row.name, // Use the updated name from the form
+  //           status: row.status, // Use the updated status from the form
+  //         },
+  //         headers: {
+  //           "x-access-token": token,
+  //           "Content-Type": "application/json",
+  //         },
+  //       });
+
+  //       if (updateResponse.data.success) {
+  //         toast.success("Prefix updated successfully");
+  //         fetchPrefixes(); // Refresh the list
+  //       } else {
+  //         toast.error(updateResponse.data.message || "Failed to update prefix");
+  //       }
+  //     } else {
+  //       toast.warning("Failed to fetch prefix details");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error editing prefix:", error);
+
+  //     if (axios.isAxiosError(error)) {
+  //       if (!error.response) {
+  //         toast.error("Network error. Please check your internet connection.");
+  //       } else {
+  //         toast.error(error.response.data.message || "Failed to edit prefix");
+  //       }
+  //     } else {
+  //       toast.error("An unexpected error occurred while editing the prefix");
+  //     }
+  //   }
+  // };
+
+  // Function to handle edit action from ZoneTable
+  const handleEditPrefix = async (row: any) => {
+    try {
+      const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:9000";
+      const token = getAuthToken();
+
+      if (!token) {
+        toast.error("Authentication token not found. Please login again.");
+        return;
+      }
+
+      // Directly update the prefix with the new data from the form
+      const updateResponse = await axios({
+        method: "PUT",
+        url: `${API_URL}/api/abid-jewelry-ms/updateStorePrefix/${row.id}`,
+        data: {
+          prefixName: row.name, // Use the updated name from the form
+          status: row.status, // Use the updated status from the form
+        },
+        headers: {
+          "x-access-token": token,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (updateResponse.data.success) {
+        toast.success("Prefix updated successfully");
+        fetchPrefixes(); // Refresh the list
+      } else {
+        toast.error(updateResponse.data.message || "Failed to update prefix");
+      }
+    } catch (error) {
+      console.error("Error editing prefix:", error);
+
+      if (axios.isAxiosError(error)) {
+        if (!error.response) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(error.response.data.message || "Failed to edit prefix");
+        }
+      } else {
+        toast.error("An unexpected error occurred while editing the prefix");
+      }
+    }
+  };
+
   // Function to handle delete action from ZoneTable
   const handleDeletePrefix = async (row: any) => {
     try {
@@ -184,7 +351,10 @@ const AddPrefix: React.FC = () => {
           className="mt-6 grid gap-8 text-[15px] Poppins-font font-medium w-full"
         >
           <div className="flex flex-col w-full">
-            <label className="mb-1 text-black">Prefix</label>
+            <label className="mb-1 text-black">
+              Prefix
+              {/* <span className="text-red-500"> *</span> */}
+            </label>
             <Input
               placeholder="eg: Rose"
               value={prefix}
@@ -200,9 +370,10 @@ const AddPrefix: React.FC = () => {
             />
             {canCreate && (
               <Button
-                text="Save"
-                className={`px-6 !bg-[#056BB7] border-none text-white ${isLoading ? "opacity-70 cursor-not-allowed" : ""
-                  }`}
+                text={isLoading ? "Saving..." : "Save"}
+                className={`px-6 !bg-[#056BB7] border-none text-white ${
+                  isLoading ? "opacity-70 cursor-not-allowed" : ""
+                }`}
                 type="submit"
                 disabled={isLoading}
               />
@@ -213,7 +384,7 @@ const AddPrefix: React.FC = () => {
 
       {isLoadingData ? (
         <div className="flex justify-center items-center h-40">
-          <p className="text-gray-500">Loading prefixes...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       ) : (
         <PrefixTable

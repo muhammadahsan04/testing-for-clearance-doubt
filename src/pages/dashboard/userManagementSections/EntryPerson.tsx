@@ -64,13 +64,18 @@ const EntryPerson: React.FC = () => {
       if (response.data.success) {
         const usersData = response.data.data || [];
 
-        // Filter only admin users
-        const adminUsers = usersData.filter(
-          (user: any) => user.role?.name === "Data Entry"
-        );
+        const validEntryRoles = [
+          "data entry",
+          "Data Entry",
+          "DataEntry",
+          "Dataentry",
+        ];
 
-        setUsers(adminUsers);
-        console.log("data entry users:", adminUsers);
+        const entryUsers = usersData.filter((user: any) =>
+          validEntryRoles.includes(user.role?.name?.toLowerCase())
+        );
+        setUsers(entryUsers);
+        console.log("Sales users:", entryUsers);
       } else {
         setError("Failed to fetch data entry");
         toast.error("Failed to fetch data entry users");

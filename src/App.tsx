@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes, HashRouter } from "react-router-dom";
 import LoginComponent from "./pages/auth/login/index";
 import ForgotPassword from "./pages/auth/forgotPassword/index";
 import ResetPassword from "./pages/auth/resetPassword/index";
@@ -9,7 +9,7 @@ import { ToastContainer } from "react-toastify";
 
 const App: React.FC = () => {
   return (
-    <Router>
+    <HashRouter>
       <>
         <ToastContainer />
         <Routes>
@@ -24,7 +24,7 @@ const App: React.FC = () => {
           </Route>
         </Routes>
       </>
-    </Router>
+    </HashRouter>
   );
 };
 
